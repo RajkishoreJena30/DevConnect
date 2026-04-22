@@ -3,6 +3,9 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+# Local environment settings with sensitive data (connection strings, secrets)
+**/appsettings.Development.json
+
 # dotenv files
 .env
 
