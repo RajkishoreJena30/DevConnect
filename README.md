@@ -6,6 +6,9 @@ A learning project built with ASP.NET Core Web API, Entity Framework Core, and J
 
 ## Concepts Covered
 
+📄 See detailed notes: [Docs/Notes.md](Docs/Notes.md)  
+📄 CORS detailed notes: [Docs/CORS.md](Docs/CORS.md)
+
 ### 1. Project Setup
 - ASP.NET Core Web API project creation
 - `Program.cs` — service registration & middleware pipeline
