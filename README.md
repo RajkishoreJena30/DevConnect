@@ -57,6 +57,21 @@ A learning project built with ASP.NET Core Web API, Entity Framework Core, and J
 
 ---
 
+### 8. CORS (Cross-Origin Resource Sharing)
+- **What is CORS** — browser security feature that blocks requests from a different origin (domain, port, or protocol)
+- Configured in `Program.cs` using `AddCors()` and `UseCors()`
+- **Named Policy** — `"AllowFrontend"` applied globally
+- `WithOrigins()` — whitelist specific frontend URLs
+- `AllowAnyHeader()` — allow all request headers
+- `AllowAnyMethod()` — allow GET, POST, PUT, DELETE etc.
+- `AllowCredentials()` — allow cookies and auth headers
+- **Middleware order** — `UseCors()` must come before `UseAuthentication()` and `UseAuthorization()`
+- CORS only applies to **browsers** — Postman, Swagger, curl are not affected
+
+📄 See detailed notes: [Docs/CORS.md](Docs/CORS.md)
+
+---
+
 ### 7. Git & Source Control
 - `git init`, `git add`, `git commit`
 - `.gitignore` — generated via `dotnet new gitignore`
