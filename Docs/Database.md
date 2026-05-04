@@ -7,9 +7,9 @@
 | Concept | Implemented? | Where |
 |---------|-------------|-------|
 | **DbContext** | ✅ Yes | `Data/FirstAPIContext.cs`, `Data/DevConnectDbContext.cs` |
-| **DbSet** | ✅ Yes | Both contexts — `DbSet<Books>`, `DbSet<User>` |
+| **DbSet** | ✅ Yes | Both contexts — `DbSet<Books>`, `DbSet<User>`, `DbSet<Post>` |
 | **Migrations** | ✅ Yes | `Migrations/` & `Migrations/DevConnectDb/` |
-| **Relationships** | ❌ Not yet | No FK relationships defined between models |
+| **Relationships** | ✅ Yes | One-to-Many: `User` → `Posts` with FK + navigation properties |
 | **ACID** | ⚠️ Partial | EF Core handles it internally — not explicitly used |
 | **CAP Theorem** | ❌ Not applicable | Applies to distributed systems — SQL Server is not distributed here |
 
@@ -95,8 +95,7 @@ await _context.SaveChangesAsync();            // DELETE FROM Users WHERE Id = @i
 | DbSet | Context | Maps To |
 |-------|---------|---------|
 | `DbSet<Books> Books` | `FirstAPIContext` | `Books` table in SQL Server |
-| `DbSet<User> Users` | `DevConnectDbContext` | `Users` table in SQL Server |
-
+| `DbSet<User> Users` | `DevConnectDbContext` | `Users` table in SQL Server || `DbSet<Post> Posts` | `DevConnectDbContext` | `Posts` table in SQL Server |
 ### Common DbSet Operations Used
 
 ```csharp
@@ -134,6 +133,7 @@ Migrations are **version-controlled database schema changes**. Instead of writin
 |-----------|-------------|
 | `20260427121252_user model added` | Created `Users` table with `Id`, `Name`, `Email`, `Age`, `Role` |
 | `20260428121049_user model updated with jwt` | Added `PasswordHash`, `CreatedAt`; changed `Role` from `int` → `string` |
+| `post model added` | Created `Posts` table with FK `UserId` → `Users.Id`, cascade delete |
 
 ### Migration Commands
 
@@ -183,25 +183,35 @@ Update-Database → Runs Up() on SQL Server
 
 ---
 
-## 4. Relationships ❌ Not Yet Implemented
+## 4. Relationships ✅ Implemented
 
 ### What are Relationships?
 Relationships define how tables connect to each other using **Foreign Keys**.
 
 | Type | Example |
 |------|---------|
-| **One-to-Many** | One `User` has many `Posts` |
-| **Many-to-Many** | Many `Users` can join many `Projects` |
-| **One-to-One** | One `User` has one `Profile` |
+| **One-to-Many** | One `User` has many `Posts` ✅ |
+| **Many-to-Many** | Many `Users` can like many `Posts` ❌ Not yet |
+| **One-to-One** | One `User` has one `Profile` ❌ Not yet |
 
-### Current State in DevConnect
-Currently `Books` and `Users` are **independent tables** with no relationship between them. This is fine for now but as the app grows (e.g. a user creates a post, a user borrows a book), relationships will be needed.
+### Implemented: User → Posts (One-to-Many)
 
-### How to Implement — Example: User has many Posts
+One `User` can create many `Posts`. Each `Post` belongs to exactly one `User`.
 
-#### Step 1 — Create `Post` model
+```
+Users                    Posts
+─────────────────        ──────────────────────────
+Id (PK)          ◄───── UserId (FK)
+Name                     Id (PK)
+Email                    Title
+PasswordHash             Content
+Role                     CreatedAt
+CreatedAt
+Age
+```
+
+#### `Models/Post.cs`
 ```csharp
-// Models/Post.cs
 public class Post
 {
     public int Id { get; set; }
@@ -217,12 +227,11 @@ public class Post
 }
 ```
 
-#### Step 2 — Update `User` model
+#### `Models/User.cs` (navigation property added)
 ```csharp
 public class User
 {
     public int Id { get; set; }
-    public string Name { get; set; } = string.Empty;
     // ... existing fields ...
 
     // Navigation Property (collection)
@@ -230,41 +239,48 @@ public class User
 }
 ```
 
-#### Step 3 — Add DbSet to context
+#### `Data/DevConnectDbContext.cs` (relationship configured)
 ```csharp
-public class DevConnectDbContext : DbContext
-{
-    public DbSet<User> Users { get; set; }
-    public DbSet<Post> Posts { get; set; }   // Add this
-}
-```
+public DbSet<User> Users { get; set; }
+public DbSet<Post> Posts { get; set; }
 
-#### Step 4 — Configure relationship (optional, EF Core infers it)
-```csharp
-// In DevConnectDbContext.OnModelCreating()
 protected override void OnModelCreating(ModelBuilder modelBuilder)
 {
+    base.OnModelCreating(modelBuilder);
+
     modelBuilder.Entity<Post>()
-        .HasOne(p => p.User)           // Post has one User
-        .WithMany(u => u.Posts)        // User has many Posts
-        .HasForeignKey(p => p.UserId)  // FK column
+        .HasOne(p => p.User)            // Post has one User
+        .WithMany(u => u.Posts)         // User has many Posts
+        .HasForeignKey(p => p.UserId)   // FK column
         .OnDelete(DeleteBehavior.Cascade); // Delete posts when user is deleted
 }
 ```
 
-#### Step 5 — Migrate
-```powershell
-Add-Migration "post model added" -Context DevConnectDbContext
-Update-Database -Context DevConnectDbContext
+#### Querying with `Include` (JOIN)
+```csharp
+// Get all posts with author name — used in PostsController
+var posts = await _context.Posts
+    .Include(p => p.User)
+    .Select(p => new PostResponseDTO
+    {
+        Id = p.Id,
+        Title = p.Title,
+        Content = p.Content,
+        CreatedAt = p.CreatedAt,
+        AuthorName = p.User.Name   // ← from the JOIN
+    })
+    .ToListAsync();
 ```
 
-#### Step 6 — Query with Include (JOIN)
-```csharp
-// Get user with all their posts
-var user = await _context.Users
-    .Include(u => u.Posts)
-    .FirstOrDefaultAsync(u => u.Id == id);
-```
+### Posts API Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/posts` | Public | Get all posts with author names |
+| `GET` | `/api/posts/{id}` | Public | Get single post |
+| `GET` | `/api/posts/my` | 🔒 JWT | Get only your posts |
+| `POST` | `/api/posts` | 🔒 JWT | Create a post |
+| `PUT` | `/api/posts/{id}` | 🔒 JWT | Update your own post |
+| `DELETE` | `/api/posts/{id}` | 🔒 JWT / Admin | Delete own post or any (Admin) |
 
 ---
 
@@ -361,15 +377,16 @@ If DevConnect scaled to use multiple SQL Server replicas or moved to a NoSQL dat
 
 ---
 
-## How to Implement Relationships in DevConnect (Next Steps)
+## What's Next
 
 ```
-1. Add Post model           → Models/Post.cs
-2. Update User model        → add List<Post> Posts navigation property
-3. Add DbSet<Post>          → DevConnectDbContext.cs
-4. Configure relationship   → OnModelCreating() in DevConnectDbContext
-5. Add migration            → Add-Migration "post model added" -Context DevConnectDbContext
-6. Update database          → Update-Database -Context DevConnectDbContext
-7. Create PostsController   → Controllers/PostsController.cs
-8. Add PostDTO              → DTOs/PostDto.cs
+✅ Post model with User FK relationship
+✅ PostsController with full CRUD
+✅ CreatePostDTO + PostResponseDTO
+
+Next ideas to build on:
+→ Comments — One Post has many Comments (nested relationship)
+→ Likes — Many Users can like many Posts (Many-to-Many)
+→ Pagination — add page/size params to GET /api/posts
+→ Filtering — GET /api/posts?userId=1 or ?search=keyword
 ```

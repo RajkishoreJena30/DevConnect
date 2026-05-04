@@ -10,5 +10,7 @@
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int Age { get; set; }
 
+        // Navigation Property — One User has many Posts
+        public List<Post> Posts { get; set; } = new();
     }
 }
