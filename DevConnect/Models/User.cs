@@ -12,5 +12,8 @@
 
         // Navigation Property — One User has many Posts
         public List<Post> Posts { get; set; } = new();
+        public ICollection<Like> Likes { get; set; }
+        public ICollection<Comment> Comments { get; set; }
+
     }
 }

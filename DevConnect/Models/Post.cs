@@ -12,5 +12,7 @@ namespace DevConnect.Models
 
         // Navigation Property — EF Core uses this to JOIN tables
         public User User { get; set; } = null!;
+        public ICollection<Like> Likes { get; set;} 
+        public ICollection<Comment> Comments { get; set; }
     }
 }

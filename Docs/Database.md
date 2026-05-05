@@ -7,9 +7,9 @@
 | Concept | Implemented? | Where |
 |---------|-------------|-------|
 | **DbContext** | ✅ Yes | `Data/FirstAPIContext.cs`, `Data/DevConnectDbContext.cs` |
-| **DbSet** | ✅ Yes | Both contexts — `DbSet<Books>`, `DbSet<User>`, `DbSet<Post>` |
+| **DbSet** | ✅ Yes | Both contexts — `DbSet<Books>`, `DbSet<User>`, `DbSet<Post>`, `DbSet<Like>`, `DbSet<Comment>` |
 | **Migrations** | ✅ Yes | `Migrations/` & `Migrations/DevConnectDb/` |
-| **Relationships** | ✅ Yes | One-to-Many: `User` → `Posts` with FK + navigation properties |
+| **Relationships** | ✅ Yes | One-to-Many: `User→Posts`, `Post→Likes`, `Post→Comments`, `User→Likes`, `User→Comments` |
 | **ACID** | ⚠️ Partial | EF Core handles it internally — not explicitly used |
 | **CAP Theorem** | ❌ Not applicable | Applies to distributed systems — SQL Server is not distributed here |
 
@@ -134,6 +134,7 @@ Migrations are **version-controlled database schema changes**. Instead of writin
 | `20260427121252_user model added` | Created `Users` table with `Id`, `Name`, `Email`, `Age`, `Role` |
 | `20260428121049_user model updated with jwt` | Added `PasswordHash`, `CreatedAt`; changed `Role` from `int` → `string` |
 | `post model added` | Created `Posts` table with FK `UserId` → `Users.Id`, cascade delete |
+| `likes and comments added` | Created `Likes` & `Comments` tables with FKs to `Posts` and `Users`; unique index on `(PostId, UserId)` for Likes |
 
 ### Migration Commands
 
@@ -191,7 +192,9 @@ Relationships define how tables connect to each other using **Foreign Keys**.
 | Type | Example |
 |------|---------|
 | **One-to-Many** | One `User` has many `Posts` ✅ |
-| **Many-to-Many** | Many `Users` can like many `Posts` ❌ Not yet |
+| **One-to-Many** | One `Post` has many `Comments` ✅ |
+| **One-to-Many** | One `Post` has many `Likes` ✅ |
+| **Many-to-Many** | Many `Users` can like many `Posts` (via `Likes` join table) ✅ |
 | **One-to-One** | One `User` has one `Profile` ❌ Not yet |
 
 ### Implemented: User → Posts (One-to-Many)
@@ -281,6 +284,60 @@ var posts = await _context.Posts
 | `POST` | `/api/posts` | 🔒 JWT | Create a post |
 | `PUT` | `/api/posts/{id}` | 🔒 JWT | Update your own post |
 | `DELETE` | `/api/posts/{id}` | 🔒 JWT / Admin | Delete own post or any (Admin) |
+
+---
+
+### Implemented: Post → Likes (One-to-Many / Unique constraint)
+
+One `Post` can have many `Likes`. A `User` can only like a `Post` once (unique index on `PostId + UserId`).
+
+```
+Users            Likes              Posts
+─────────        ─────────────      ─────────────
+Id (PK)  ◄────  UserId (FK)        Id (PK)
+                 PostId (FK)  ────► Id (PK)
+                 Id (PK)
+                 CreatedAt
+```
+
+#### Key config in `DevConnectDbContext`
+```csharp
+// Prevent duplicate likes
+modelBuilder.Entity<Like>()
+    .HasIndex(l => new { l.PostId, l.UserId })
+    .IsUnique();
+```
+
+### Likes API Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/posts/{postId}/likes` | Public | Get like count + liked by me |
+| `POST` | `/api/posts/{postId}/likes` | 🔒 JWT | Toggle like / unlike |
+
+---
+
+### Implemented: Post → Comments (One-to-Many)
+
+One `Post` can have many `Comments`. Each `Comment` belongs to one `Post` and one `User`.
+
+```
+Users            Comments           Posts
+─────────        ─────────────      ─────────────
+Id (PK)  ◄────  UserId (FK)        Id (PK)
+                 PostId (FK)  ────► Id (PK)
+                 Id (PK)
+                 Content
+                 CreatedAt
+                 UpdatedAt
+```
+
+### Comments API Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/posts/{postId}/comments` | Public | Get all comments on a post |
+| `POST` | `/api/posts/{postId}/comments` | 🔒 JWT | Add a comment |
+| `PUT` | `/api/posts/{postId}/comments/{id}` | 🔒 JWT | Edit own comment |
+| `DELETE` | `/api/posts/{postId}/comments/{id}` | 🔒 JWT / Admin | Delete comment |
 
 ---
 
@@ -382,11 +439,14 @@ If DevConnect scaled to use multiple SQL Server replicas or moved to a NoSQL dat
 ```
 ✅ Post model with User FK relationship
 ✅ PostsController with full CRUD
-✅ CreatePostDTO + PostResponseDTO
+✅ Like model with unique constraint (PostId + UserId)
+✅ LikesController with toggle like/unlike
+✅ Comment model with Post + User FK
+✅ CommentsController with full CRUD
 
 Next ideas to build on:
-→ Comments — One Post has many Comments (nested relationship)
-→ Likes — Many Users can like many Posts (Many-to-Many)
-→ Pagination — add page/size params to GET /api/posts
-→ Filtering — GET /api/posts?userId=1 or ?search=keyword
+→ Pagination — add page/size params to GET /api/posts and GET /api/posts/{id}/comments
+→ Filtering  — GET /api/posts?userId=1 or ?search=keyword
+→ Profile    — One-to-One: User has one Profile (bio, avatar, etc.)
+→ Follow     — Many-to-Many: User follows User
 ```

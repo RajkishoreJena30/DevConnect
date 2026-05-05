@@ -134,6 +134,30 @@ DevConnect/
 | `GET` | `/api/books/{id}` | Get book by ID |
 | `POST` | `/api/books` | Add a new book |
 
+### Posts
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/posts` | Public | Get all posts |
+| `GET` | `/api/posts/{id}` | Public | Get post by ID |
+| `GET` | `/api/posts/my` | 🔒 JWT | Get own posts |
+| `POST` | `/api/posts` | 🔒 JWT | Create a post |
+| `PUT` | `/api/posts/{id}` | 🔒 JWT | Update own post |
+| `DELETE` | `/api/posts/{id}` | 🔒 JWT/Admin | Delete post |
+
+### Likes
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/posts/{postId}/likes` | Public | Get like count + liked by me |
+| `POST` | `/api/posts/{postId}/likes` | 🔒 JWT | Toggle like / unlike |
+
+### Comments
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/posts/{postId}/comments` | Public | Get all comments |
+| `POST` | `/api/posts/{postId}/comments` | 🔒 JWT | Add a comment |
+| `PUT` | `/api/posts/{postId}/comments/{id}` | 🔒 JWT | Edit own comment |
+| `DELETE` | `/api/posts/{postId}/comments/{id}` | 🔒 JWT/Admin | Delete comment |
+
 ---
 
 ## Getting Started
