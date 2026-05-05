@@ -8,7 +8,8 @@ A learning project built with ASP.NET Core Web API, Entity Framework Core, and J
 
 📄 See detailed notes: [Docs/Notes.md](Docs/Notes.md)  
 📄 CORS detailed notes: [Docs/CORS.md](Docs/CORS.md)  
-📄 Database concepts: [Docs/Database.md](Docs/Database.md)
+📄 Database concepts: [Docs/Database.md](Docs/Database.md)  
+📄 Architecture & Design Patterns: [Docs/Architecture.md](Docs/Architecture.md)
 
 ### 1. Project Setup
 - ASP.NET Core Web API project creation
