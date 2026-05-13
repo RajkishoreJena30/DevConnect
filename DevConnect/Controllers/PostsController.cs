@@ -1,155 +1,67 @@
-using DevConnect.Data;
 using DevConnect.DTOs;
-using DevConnect.Models;
+using DevConnect.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace DevConnect.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
     public class PostsController : ControllerBase
     {
-        private readonly DevConnectDbContext _context;
+        private readonly IPostService _postService; // ← interface not concrete class
 
-        public PostsController(DevConnectDbContext context)
+        public PostsController(IPostService postService)
         {
-            _context = context;
+            _postService = postService;
         }
 
-        // GET: api/posts  — Get all posts with author name
         [HttpGet]
-        [AllowAnonymous]
-        public async Task<ActionResult<List<PostResponseDTO>>> GetPosts()
-        {
-            var posts = await _context.Posts
-                .Include(p => p.User)
-                .Select(p => new PostResponseDTO
-                {
-                    Id = p.Id,
-                    Title = p.Title,
-                    Content = p.Content,
-                    CreatedAt = p.CreatedAt,
-                    AuthorName = p.User.Name
-                })
-                .ToListAsync();
+        public async Task<IActionResult> GetAll() =>
+            Ok(await _postService.GetAllPostsAsync());
 
-            return Ok(posts);
-        }
-
-        // GET: api/posts/5  — Get single post
         [HttpGet("{id}")]
-        [AllowAnonymous]
-        public async Task<ActionResult<PostResponseDTO>> GetPostById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            var post = await _context.Posts
-                .Include(p => p.User)
-                .FirstOrDefaultAsync(p => p.Id == id);
-
-            if (post == null)
-                return NotFound();
-
-            return Ok(new PostResponseDTO
-            {
-                Id = post.Id,
-                Title = post.Title,
-                Content = post.Content,
-                CreatedAt = post.CreatedAt,
-                AuthorName = post.User.Name
-            });
+            var post = await _postService.GetPostByIdAsync(id);
+            return post == null ? NotFound() : Ok(post);
         }
 
-        // GET: api/posts/my  — Get own posts
         [HttpGet("my")]
-        public async Task<ActionResult<List<PostResponseDTO>>> GetMyPosts()
+        [Authorize]
+        public async Task<IActionResult> GetMyPosts()
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            var posts = await _context.Posts
-                .Where(p => p.UserId == userId)
-                .Select(p => new PostResponseDTO
-                {
-                    Id = p.Id,
-                    Title = p.Title,
-                    Content = p.Content,
-                    CreatedAt = p.CreatedAt,
-                    AuthorName = p.User.Name
-                })
-                .ToListAsync();
-
-            return Ok(posts);
+            return Ok(await _postService.GetMyPostsAsync(userId));
         }
 
-        // POST: api/posts  — Create post (logged in user)
         [HttpPost]
-        public async Task<ActionResult<PostResponseDTO>> CreatePost(CreatePostDTO dto)
+        [Authorize]
+        public async Task<IActionResult> Create(CreatePostDTO dto)
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var user = await _context.Users.FindAsync(userId);
-            if (user == null)
-                return Unauthorized();
-
-            var post = new Post
-            {
-                Title = dto.Title,
-                Content = dto.Content,
-                UserId = userId
-            };
-
-            _context.Posts.Add(post);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetPostById), new { id = post.Id }, new PostResponseDTO
-            {
-                Id = post.Id,
-                Title = post.Title,
-                Content = post.Content,
-                CreatedAt = post.CreatedAt,
-                AuthorName = user.Name
-            });
+            var post = await _postService.CreatePostAsync(userId, dto);
+            return CreatedAtAction(nameof(GetById), new { id = post.Id }, post);
         }
 
-        // PUT: api/posts/5  — Update own post only
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdatePost(int id, CreatePostDTO dto)
+        [Authorize]
+        public async Task<IActionResult> Update(int id, CreatePostDTO dto)
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var post = await _context.Posts.FindAsync(id);
-
-            if (post == null)
-                return NotFound();
-
-            if (post.UserId != userId)
-                return Forbid(); // Can't edit someone else's post
-
-            post.Title = dto.Title;
-            post.Content = dto.Content;
-
-            await _context.SaveChangesAsync();
-            return NoContent();
+            var result = await _postService.UpdatePostAsync(id, userId, dto);
+            return result ? NoContent() : NotFound();
         }
 
-        // DELETE: api/posts/5  — Delete own post (or Admin)
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeletePost(int id)
+        [Authorize]
+        public async Task<IActionResult> Delete(int id)
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var userRole = User.FindFirstValue(ClaimTypes.Role);
-            var post = await _context.Posts.FindAsync(id);
-
-            if (post == null)
-                return NotFound();
-
-            // Only post owner or Admin can delete
-            if (post.UserId != userId && userRole != "Admin")
-                return Forbid();
-
-            _context.Posts.Remove(post);
-            await _context.SaveChangesAsync();
-            return NoContent();
+            var role = User.FindFirstValue(ClaimTypes.Role)!;
+            var result = await _postService.DeletePostAsync(id, userId, role);
+            return result ? NoContent() : NotFound();
         }
     }
 }

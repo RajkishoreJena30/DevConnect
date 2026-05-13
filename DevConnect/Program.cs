@@ -1,4 +1,12 @@
+using AutoMapper;
 using DevConnect.Data;
+using DevConnect.Interfaces;
+using DevConnect.Mappings;
+using DevConnect.Repositories;
+using DevConnect.Services;
+using DevConnect.Validators;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -24,7 +32,21 @@ builder.Services.AddCors(options =>
     });
 });
 
+// FluentValidation — registers all validators (RegisterValidator, LoginValidator, etc.)
+// Note: AddFluentValidationAutoValidation was removed in v11. Inject IValidator<T> manually in controllers.
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterValidator>();
+
 builder.Services.AddControllers();
+
+// Repository — Scoped means one instance per HTTP request
+builder.Services.AddScoped<IPostRepository, PostRepository>();
+
+// Service — Scoped for same reason
+builder.Services.AddScoped<IPostService, PostService>();
+
+// AutoMapper — scans assembly for all Profile classes
+builder.Services.AddAutoMapper(typeof(MappingProfile));
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>

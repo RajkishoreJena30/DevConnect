@@ -40,5 +40,9 @@
         public string Content { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public string AuthorName { get; set; } = string.Empty;
+        public int UserId { get; set; }
+        public int LikesCount { get; set; }                     // comes from Likes.Count
+        public int CommentsCount { get; set; }                   // comes from Comments.Count
+        public DateTime? UpdatedAt { get; set; }
     }
 }

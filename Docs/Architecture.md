@@ -7,9 +7,9 @@
 | Concept | Implemented? | Where |
 |---------|-------------|-------|
 | **DTOs** | ✅ Yes | `DTOs/UserDto.cs`, `DTOs/PostInteractionDTO.cs` |
-| **Service-Repository Pattern** | ❌ Not yet | Controllers talk directly to DbContext |
-| **AutoMapper** | ❌ Not yet | Manual mapping in every controller |
-| **FluentValidation** | ❌ Not yet | No input validation on DTOs |
+| **Service-Repository Pattern** | ✅ Yes | `Interfaces/`, `Repositories/PostRepository.cs`, `Services/PostService.cs` |
+| **AutoMapper** | ✅ Yes | `Mappings/MappingProfile.cs` — Post, Comment, User mappings |
+| **FluentValidation** | ✅ Yes | `Validators/AuthValidators.cs`, `Validators/PostValidators.cs` |
 | **SOLID** | ⚠️ Partial | SRP partially followed; others not applied |
 | **DRY** | ⚠️ Partial | `GetUserId()` logic repeated in every controller |
 
@@ -40,7 +40,7 @@ A DTO is an object used to carry data between layers, exposing only what is need
 
 ---
 
-## 2. Service-Repository Pattern ❌ Not Yet Implemented
+## 2. Service-Repository Pattern ✅ Implemented (Posts)
 
 ### What is it?
 
@@ -48,319 +48,386 @@ A DTO is an object used to carry data between layers, exposing only what is need
 **Service Pattern** — contains business logic, sits between Controller and Repository.
 
 ```
-Current (❌ tightly coupled):
+Before (❌ tightly coupled):
 Controller → DbContext directly
 
-Target (✅ proper layering):
-Controller → IService → IRepository → DbContext
+Now (✅ proper layering):
+Controller → IPostService → IPostRepository → DbContext
 ```
 
 ### Why It Matters
 | Without Pattern | With Pattern |
 |-----------------|--------------|
 | Business logic mixed with DB calls in controller | Business logic in Service, DB in Repository |
-| Hard to unit test (DbContext is hard to mock) | Easy to mock `IUserService` in tests |
-| Duplicate DB queries across controllers | Centralised DB access |
+| Hard to unit test (DbContext is hard to mock) | Easy to mock `IPostService` in tests |
+| Duplicate DB queries across controllers | Centralised DB access in Repository |
 | Hard to swap database | Just replace repository implementation |
 
-### How to Implement — Step by Step
+### Implemented Files
 
-#### Step 1 — Create `Interfaces` folder and define interfaces
-
-**`Interfaces/IUserRepository.cs`**
+#### `Interfaces/IPostRepository.cs` — DB contract
 ```csharp
-namespace DevConnect.Interfaces
+public interface IPostRepository
 {
-    public interface IUserRepository
-    {
-        Task<User?> GetByIdAsync(int id);
-        Task<User?> GetByEmailAsync(string email);
-        Task<List<User>> GetAllAsync();
-        Task<User> AddAsync(User user);
-        Task UpdateAsync(User user);
-        Task DeleteAsync(User user);
-    }
+    Task<List<Post>> GetAllAsync();
+    Task<Post?> GetByIdAsync(int id);
+    Task<List<Post>> GetByUserIdAsync(int userId);
+    Task<Post> CreateAsync(Post post);
+    Task UpdateAsync(Post post);
+    Task DeleteAsync(Post post);
+    Task<bool> ExistsAsync(int id);
 }
 ```
 
-**`Interfaces/IUserService.cs`**
+#### `Interfaces/IPostService.cs` — Business logic contract
 ```csharp
-namespace DevConnect.Interfaces
+public interface IPostService
 {
-    public interface IUserService
-    {
-        Task<AuthResponseDTO> RegisterAsync(RegisterDTO dto);
-        Task<AuthResponseDTO> LoginAsync(LoginDTO dto);
-        Task<User?> GetProfileAsync(int userId);
-        Task UpdateProfileAsync(int userId, UpdateProfileDTO dto);
-    }
+    Task<List<PostResponseDTO>> GetAllPostsAsync();
+    Task<PostResponseDTO?> GetPostByIdAsync(int id);
+    Task<List<PostResponseDTO>> GetMyPostsAsync(int userId);
+    Task<PostResponseDTO> CreatePostAsync(int userId, CreatePostDTO dto);
+    Task<bool> UpdatePostAsync(int postId, int userId, CreatePostDTO dto);
+    Task<bool> DeletePostAsync(int postId, int userId, string role);
 }
 ```
 
-#### Step 2 — Create `Repositories` folder and implement
-
-**`Repositories/UserRepository.cs`**
+#### `Repositories/PostRepository.cs` — EF Core data access
 ```csharp
-public class UserRepository : IUserRepository
+public class PostRepository : IPostRepository
 {
     private readonly DevConnectDbContext _context;
-    public UserRepository(DevConnectDbContext context) => _context = context;
+    public PostRepository(DevConnectDbContext context) => _context = context;
 
-    public async Task<User?> GetByIdAsync(int id) 
-        => await _context.Users.FindAsync(id);
+    public async Task<List<Post>> GetAllAsync() =>
+        await _context.Posts
+            .Include(p => p.User)
+            .Include(p => p.Likes)
+            .Include(p => p.Comments)
+            .ToListAsync();
 
-    public async Task<User?> GetByEmailAsync(string email)
-        => await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-
-    public async Task<List<User>> GetAllAsync()
-        => await _context.Users.ToListAsync();
-
-    public async Task<User> AddAsync(User user)
+    public async Task<Post> CreateAsync(Post post)
     {
-        _context.Users.Add(user);
+        _context.Posts.Add(post);
         await _context.SaveChangesAsync();
-        return user;
+        return post;
     }
 
-    public async Task UpdateAsync(User user)
+    public async Task UpdateAsync(Post post)
     {
-        _context.Users.Update(user);
+        _context.Posts.Update(post);
         await _context.SaveChangesAsync();
     }
 
-    public async Task DeleteAsync(User user)
+    public async Task DeleteAsync(Post post)
     {
-        _context.Users.Remove(user);
+        _context.Posts.Remove(post);
         await _context.SaveChangesAsync();
     }
+
+    public async Task<bool> ExistsAsync(int id) =>
+        await _context.Posts.AnyAsync(p => p.Id == id);
 }
 ```
 
-#### Step 3 — Create `Services` folder and implement
-
-**`Services/UserService.cs`**
+#### `Services/PostService.cs` — Business logic
 ```csharp
-public class UserService : IUserService
+public class PostService : IPostService
 {
-    private readonly IUserRepository _repo;
-    private readonly IConfiguration _config;
+    private readonly IPostRepository _repo;
+    private readonly IMapper _mapper;
 
-    public UserService(IUserRepository repo, IConfiguration config)
+    public PostService(IPostRepository repo, IMapper mapper)
     {
         _repo = repo;
-        _config = config;
+        _mapper = mapper;
     }
 
-    public async Task<AuthResponseDTO> RegisterAsync(RegisterDTO dto)
+    public async Task<PostResponseDTO> CreatePostAsync(int userId, CreatePostDTO dto)
     {
-        if (await _repo.GetByEmailAsync(dto.Email) != null)
-            throw new Exception("Email already exists.");
+        var post = _mapper.Map<Post>(dto);  // DTO → Model
+        post.UserId = userId;               // assign owner from JWT
+        var created = await _repo.CreateAsync(post);
+        return _mapper.Map<PostResponseDTO>(created);
+    }
 
-        var user = new User
-        {
-            Name = dto.Name,
-            Email = dto.Email,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password)
-        };
+    public async Task<bool> UpdatePostAsync(int postId, int userId, CreatePostDTO dto)
+    {
+        var post = await _repo.GetByIdAsync(postId);
+        if (post == null || post.UserId != userId) return false; // not found or not owner
+        _mapper.Map(dto, post);
+        post.UpdatedAt = DateTime.UtcNow;
+        await _repo.UpdateAsync(post);
+        return true;
+    }
 
-        await _repo.AddAsync(user);
-        return new AuthResponseDTO { Token = GenerateToken(user), Name = user.Name, ... };
+    public async Task<bool> DeletePostAsync(int postId, int userId, string role)
+    {
+        var post = await _repo.GetByIdAsync(postId);
+        if (post == null) return false;
+        if (post.UserId != userId && role != "Admin") return false; // forbidden
+        await _repo.DeleteAsync(post);
+        return true;
     }
 }
 ```
 
-#### Step 4 — Register in `Program.cs`
+#### `Controllers/PostsController.cs` — thin controller, no DB logic
 ```csharp
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IUserService, UserService>();
-```
-
-#### Step 5 — Update Controller to use Service (not DbContext directly)
-```csharp
-public class AuthController : ControllerBase
+public class PostsController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly IPostService _postService; // ← interface, not concrete class
 
-    public AuthController(IUserService userService)
-    {
-        _userService = userService;
-    }
+    public PostsController(IPostService postService) => _postService = postService;
 
-    [HttpPost("register")]
-    public async Task<ActionResult<AuthResponseDTO>> Register(RegisterDTO dto)
+    [HttpGet]
+    public async Task<IActionResult> GetAll() =>
+        Ok(await _postService.GetAllPostsAsync());
+
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> Create(CreatePostDTO dto)
     {
-        var result = await _userService.RegisterAsync(dto);
-        return Ok(result);
+        var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var post = await _postService.CreatePostAsync(userId, dto);
+        return CreatedAtAction(nameof(GetById), new { id = post.Id }, post);
     }
 }
 ```
+
+#### Registration in `Program.cs`
+```csharp
+builder.Services.AddScoped<IPostRepository, PostRepository>();
+builder.Services.AddScoped<IPostService, PostService>();
+```
+
+> **Note:** `IUserRepository` / `UserService` for Auth are next to implement — `AuthController` still uses `DevConnectDbContext` directly.
 
 ---
 
-## 3. AutoMapper ❌ Not Yet Implemented
+## 3. AutoMapper ✅ Implemented
 
 ### What is AutoMapper?
 AutoMapper automatically maps properties from one object type to another — removing manual mapping code.
 
-### Current Problem (Manual Mapping — repeated everywhere)
+### Before vs After
 ```csharp
-// This pattern is repeated in PostsController, CommentsController, etc.
+// Before (❌ manual mapping — repeated everywhere)
 var result = new PostResponseDTO
 {
     Id = post.Id,
     Title = post.Title,
     Content = post.Content,
     CreatedAt = post.CreatedAt,
-    AuthorName = post.User.Name
+    AuthorName = post.User.Name,
+    LikesCount = post.Likes.Count
 };
+
+// After (✅ AutoMapper — one line)
+var result = _mapper.Map<PostResponseDTO>(post);
 ```
 
-### How to Implement
-
-#### Step 1 — Install NuGet Package
-```powershell
-dotnet add package AutoMapper
-dotnet add package AutoMapper.Extensions.Microsoft.DependencyInjection
+### Installed Packages
+```
+AutoMapper 10.0.0
+AutoMapper.Extensions.Microsoft.DependencyInjection 7.0.0
 ```
 
-#### Step 2 — Create `Profiles/MappingProfile.cs`
+### `Mappings/MappingProfile.cs` — actual implementation
 ```csharp
-using AutoMapper;
-
-namespace DevConnect.Profiles
+public class MappingProfile : Profile
 {
-    public class MappingProfile : Profile
+    public MappingProfile()
     {
-        public MappingProfile()
-        {
-            // User mappings
-            CreateMap<RegisterDTO, User>()
-                .ForMember(dest => dest.PasswordHash, opt => opt.Ignore());
+        // Post → PostResponseDTO
+        // AutoMapper auto-maps: Id, Title, Content, UserId, CreatedAt, UpdatedAt
+        // Manual config for computed/navigation properties:
+        CreateMap<Post, PostResponseDTO>()
+            .ForMember(dest => dest.AuthorName,    opt => opt.MapFrom(src => src.User.Name))
+            .ForMember(dest => dest.LikesCount,    opt => opt.MapFrom(src => src.Likes.Count))
+            .ForMember(dest => dest.CommentsCount, opt => opt.MapFrom(src => src.Comments.Count));
 
-            CreateMap<User, AuthResponseDTO>();
-            CreateMap<UpdateProfileDTO, User>();
+        // CreatePostDTO → Post (ignore fields set manually)
+        CreateMap<CreatePostDTO, Post>()
+            .ForMember(dest => dest.UserId,    opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt, opt => opt.Ignore());
 
-            // Post mappings
-            CreateMap<Post, PostResponseDTO>()
-                .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.User.Name));
+        // Comment → CommentResponseDTO
+        CreateMap<Comment, CommentResponseDTO>()
+            .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.User.Name));
 
-            CreateMap<CreatePostDTO, Post>();
-
-            // Comment mappings
-            CreateMap<Comment, CommentResponseDTO>()
-                .ForMember(dest => dest.AuthorName, opt => opt.MapFrom(src => src.User.Name));
-        }
+        // RegisterDTO → User (PasswordHash set manually after BCrypt hashing)
+        CreateMap<RegisterDTO, User>()
+            .ForMember(dest => dest.PasswordHash, opt => opt.Ignore())
+            .ForMember(dest => dest.CreatedAt,    opt => opt.Ignore());
     }
 }
 ```
 
-#### Step 3 — Register in `Program.cs`
+### Key Concepts
+
+| Scenario | Code |
+|----------|------|
+| Map single object | `_mapper.Map<PostResponseDTO>(post)` |
+| Map list | `_mapper.Map<List<PostResponseDTO>>(posts)` |
+| Map DTO onto existing model (update) | `_mapper.Map(dto, post)` |
+| Ignore a property | `.ForMember(dest => dest.X, opt => opt.Ignore())` |
+| Custom source mapping | `.ForMember(dest => dest.X, opt => opt.MapFrom(src => src.Y.Z))` |
+
+### Registration in `Program.cs`
 ```csharp
-builder.Services.AddAutoMapper(typeof(Program));
+// Scans the assembly containing MappingProfile and registers all Profile classes
+builder.Services.AddAutoMapper(typeof(MappingProfile));
 ```
 
-#### Step 4 — Use in Controllers
+### Usage in `PostService.cs`
 ```csharp
-public class PostsController : ControllerBase
+// Inject IMapper
+public PostService(IPostRepository repo, IMapper mapper)
 {
-    private readonly IMapper _mapper;
-
-    public PostsController(DevConnectDbContext context, IMapper mapper)
-    {
-        _context = context;
-        _mapper = mapper;
-    }
-
-    [HttpGet]
-    public async Task<ActionResult<List<PostResponseDTO>>> GetPosts()
-    {
-        var posts = await _context.Posts.Include(p => p.User).ToListAsync();
-        return Ok(_mapper.Map<List<PostResponseDTO>>(posts)); // ← one line instead of Select()
-    }
+    _repo = repo;
+    _mapper = mapper;
 }
+
+// Map DTO → Model when creating
+var post = _mapper.Map<Post>(dto);
+
+// Map Model → DTO when returning response
+return _mapper.Map<PostResponseDTO>(created);
+
+// Map updated values onto existing model (preserves Id, CreatedAt, etc.)
+_mapper.Map(dto, post);
+```
+
+### Usage in `AuthController.cs`
+```csharp
+// RegisterDTO → User (avoids manually setting Name, Email, Role, CreatedAt)
+var user = _mapper.Map<User>(dto);
+user.PasswordHash = BC.HashPassword(dto.Password); // set manually — excluded from map
 ```
 
 ---
 
-## 4. FluentValidation ❌ Not Yet Implemented
+## 4. FluentValidation ✅ Implemented
 
 ### What is FluentValidation?
 FluentValidation provides a clean, fluent API to define validation rules for your DTOs — separate from the DTO class itself.
 
-### Current Problem (No Validation)
-```csharp
-// RegisterDTO has no validation — empty name, invalid email, weak password all accepted
-public class RegisterDTO
-{
-    public string Name { get; set; } = string.Empty;
-    public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-}
+### Installed Packages
+```
+FluentValidation 11.0.1
+FluentValidation.AspNetCore 11.0.1
+FluentValidation.DependencyInjectionExtensions 11.0.1
 ```
 
-### How to Implement
+> ⚠️ **Important — v11 Breaking Change:**  
+> `AddFluentValidationAutoValidation()` was **removed in v11**. Auto-pipeline validation no longer exists.  
+> You must inject `IValidator<T>` and call `.ValidateAsync(dto)` manually in controllers.
 
-#### Step 1 — Install NuGet Package
-```powershell
-dotnet add package FluentValidation.AspNetCore
-```
-
-#### Step 2 — Create `Validators` folder
-
-**`Validators/RegisterDTOValidator.cs`**
+### `Validators/AuthValidators.cs` — actual implementation
 ```csharp
-using FluentValidation;
-
-namespace DevConnect.Validators
+// Validates RegisterDTO — injected into AuthController
+public class RegisterValidator : AbstractValidator<RegisterDTO>
 {
-    public class RegisterDTOValidator : AbstractValidator<RegisterDTO>
+    public RegisterValidator()
     {
-        public RegisterDTOValidator()
-        {
-            RuleFor(x => x.Name)
-                .NotEmpty().WithMessage("Name is required.")
-                .MinimumLength(2).WithMessage("Name must be at least 2 characters.");
+        RuleFor(x => x.Name)
+            .NotEmpty().WithMessage("Name is required.")
+            .MinimumLength(2).WithMessage("Name must be at least 2 characters.")
+            .MaximumLength(50).WithMessage("Name cannot exceed 50 characters.");
 
-            RuleFor(x => x.Email)
-                .NotEmpty().WithMessage("Email is required.")
-                .EmailAddress().WithMessage("Invalid email format.");
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email is required.")
+            .EmailAddress().WithMessage("Invalid email format.");
 
-            RuleFor(x => x.Password)
-                .NotEmpty().WithMessage("Password is required.")
-                .MinimumLength(8).WithMessage("Password must be at least 8 characters.")
-                .Matches("[A-Z]").WithMessage("Password must contain an uppercase letter.")
-                .Matches("[0-9]").WithMessage("Password must contain a number.")
-                .Matches("[^a-zA-Z0-9]").WithMessage("Password must contain a special character.");
-        }
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("Password is required.")
+            .MinimumLength(8).WithMessage("Password must be at least 8 characters.")
+            .Matches("[A-Z]").WithMessage("Must contain an uppercase letter.")
+            .Matches("[a-z]").WithMessage("Must contain a lowercase letter.")
+            .Matches("[0-9]").WithMessage("Must contain a number.")
+            .Matches("[^a-zA-Z0-9]").WithMessage("Must contain a special character.");
+    }
+}
+
+// Validates LoginDTO
+public class LoginValidator : AbstractValidator<LoginDTO>
+{
+    public LoginValidator()
+    {
+        RuleFor(x => x.Email)
+            .NotEmpty().WithMessage("Email is required.")
+            .EmailAddress().WithMessage("Invalid email format.");
+
+        RuleFor(x => x.Password)
+            .NotEmpty().WithMessage("Password is required.");
     }
 }
 ```
 
-**`Validators/CreatePostDTOValidator.cs`**
+### `Validators/PostValidators.cs` — actual implementation
 ```csharp
-public class CreatePostDTOValidator : AbstractValidator<CreatePostDTO>
+// Validates CreatePostDTO
+public class CreatePostValidator : AbstractValidator<CreatePostDTO>
 {
-    public CreatePostDTOValidator()
+    public CreatePostValidator()
     {
         RuleFor(x => x.Title)
             .NotEmpty().WithMessage("Title is required.")
-            .MaximumLength(200).WithMessage("Title cannot exceed 200 characters.");
+            .MinimumLength(3).WithMessage("Title must be at least 3 characters.")
+            .MaximumLength(100).WithMessage("Title cannot exceed 100 characters.");
 
         RuleFor(x => x.Content)
             .NotEmpty().WithMessage("Content is required.")
-            .MinimumLength(10).WithMessage("Content must be at least 10 characters.");
+            .MinimumLength(10).WithMessage("Content must be at least 10 characters.")
+            .MaximumLength(5000).WithMessage("Content cannot exceed 5000 characters.");
+    }
+}
+
+// Validates CreateCommentDTO
+public class CreateCommentValidator : AbstractValidator<CreateCommentDTO>
+{
+    public CreateCommentValidator()
+    {
+        RuleFor(x => x.Content)
+            .NotEmpty().WithMessage("Comment cannot be empty.")
+            .MinimumLength(2).WithMessage("Comment must be at least 2 characters.")
+            .MaximumLength(500).WithMessage("Comment cannot exceed 500 characters.");
     }
 }
 ```
 
-#### Step 3 — Register in `Program.cs`
+### Registration in `Program.cs`
 ```csharp
-builder.Services.AddFluentValidationAutoValidation();
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+// Scans the assembly and registers all validators automatically
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterValidator>();
 ```
 
-#### How it Works
-Once registered, validation runs **automatically** before the controller action is called. If validation fails, ASP.NET Core returns `400 Bad Request` with error details — no manual validation code needed in controllers.
+### How to Use in a Controller (v11 manual pattern)
+```csharp
+[HttpPost("register")]
+public async Task<ActionResult<AuthResponseDTO>> Register(
+    RegisterDTO dto,
+    [FromServices] IValidator<RegisterDTO> validator)  // injected from DI
+{
+    var result = await validator.ValidateAsync(dto);
+    if (!result.IsValid)
+        return BadRequest(result.Errors.Select(e => e.ErrorMessage));
+
+    // proceed with registration...
+}
+```
+
+### Available Rule Methods
+| Method | Purpose |
+|--------|---------|
+| `.NotEmpty()` | Field must not be null or whitespace |
+| `.MinimumLength(n)` | Minimum string length |
+| `.MaximumLength(n)` | Maximum string length |
+| `.EmailAddress()` | Must be a valid email format |
+| `.Matches("regex")` | Must match the given regex pattern |
+| `.GreaterThan(n)` | Numeric value must be greater than n |
+| `.WithMessage("...")` | Custom error message for the preceding rule |
 
 ---
 
@@ -459,26 +526,32 @@ if (entity == null) return NotFound();
 ## Implementation Roadmap
 
 ```
-Phase 1 — Quick wins (low effort, high value)
-  → Create BaseApiController with GetCurrentUserId()
-  → Add [Required]/[EmailAddress] attributes to DTOs (or FluentValidation)
+Phase 1 — Quick wins ✅ Done
+  ✅ AutoMapper installed and MappingProfile created
+  ✅ FluentValidation installed and validators created
 
-Phase 2 — AutoMapper
-  → Install AutoMapper
-  → Create MappingProfile
-  → Replace manual mappings in controllers
+Phase 2 — AutoMapper ✅ Done
+  ✅ AutoMapper 10.0.0 installed
+  ✅ Mappings/MappingProfile.cs — Post, Comment, User mappings
+  ✅ PostService uses _mapper.Map<>() throughout
+  ✅ AuthController uses _mapper.Map<User>(dto) for registration
 
-Phase 3 — FluentValidation
-  → Install FluentValidation
-  → Create validators for RegisterDTO, CreatePostDTO, CreateCommentDTO
+Phase 3 — FluentValidation ✅ Done
+  ✅ FluentValidation 11.0.1 installed
+  ✅ Validators/AuthValidators.cs — RegisterValidator, LoginValidator
+  ✅ Validators/PostValidators.cs — CreatePostValidator, CreateCommentValidator
+  ✅ Registered via AddValidatorsFromAssemblyContaining<RegisterValidator>()
+  ⚠️  Manual injection pattern required (v11 removed auto-pipeline validation)
 
-Phase 4 — Service-Repository Pattern
-  → Create Interfaces/
-  → Create Repositories/
-  → Create Services/
-  → Register in Program.cs
-  → Refactor controllers to use services
+Phase 4 — Service-Repository Pattern ✅ Done (Posts)
+  ✅ Interfaces/IPostRepository.cs
+  ✅ Interfaces/IPostService.cs
+  ✅ Repositories/PostRepository.cs
+  ✅ Services/PostService.cs
+  ✅ PostsController refactored — no DbContext, no business logic
+  ❌ IUserRepository / UserService — AuthController still uses DbContext directly
 
-Phase 5 — SOLID cleanup
-  → All principles naturally satisfied after Phases 1-4
+Phase 5 — SOLID / DRY cleanup ❌ Pending
+  ❌ BaseApiController with GetCurrentUserId() — userId logic repeated in controllers
+  ❌ IUserRepository + UserRepository + IUserService + UserService
 ```

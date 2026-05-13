@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using AutoMapper;
 
 namespace DevConnect.Controllers
 {
@@ -17,11 +18,13 @@ namespace DevConnect.Controllers
     {
         private readonly DevConnectDbContext _context;
         private readonly IConfiguration _config;
+        private readonly IMapper _mapper;
 
-        public AuthController(DevConnectDbContext context, IConfiguration config)
+        public AuthController(DevConnectDbContext context, IConfiguration config, IMapper mapper)
         {
             _context = context;
             _config = config;
+            _mapper = mapper;
         }
 
         // POST: api/auth/register
@@ -31,13 +34,12 @@ namespace DevConnect.Controllers
             if (await _context.Users.AnyAsync(user => user.Email == dto.Email))
                 return BadRequest("Email already exists.");
 
-            var user = new User
-            {
-                Name = dto.Name,
-                Email = dto.Email,
-                PasswordHash = BC.HashPassword(dto.Password),
-                Role = "User"
-            };
+         // Before — manual mapping:
+        // var user = new User { Name = dto.Name, Email = dto.Email, ... }
+
+        // After — AutoMapper:
+        var user = _mapper.Map<User>(dto);              // RegisterDTO → User
+        user.PasswordHash = BC.HashPassword(dto.Password); // set manually (ignored in map)
 
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
