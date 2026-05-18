@@ -84,6 +84,11 @@ builder.Services.AddDbContext<FirstAPIContext>(options => options.UseSqlServer(b
 
 builder.Services.AddDbContext<DevConnectDbContext>(option => option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Register AuthService
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+
+
 //JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -99,7 +104,26 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(builder.Configuration["JwtSettings:Key"]!))
         };
+    })// Google OIDC
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Google:ClientId"]!;
+        options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+
+        // Extra fields we want from Google
+        options.Scope.Add("email");
+        options.Scope.Add("profile");
+    })
+    // GitHub OAuth
+    .AddGitHub(options =>
+    {
+        options.ClientId = builder.Configuration["GitHub:ClientId"]!;
+        options.ClientSecret = builder.Configuration["GitHub:ClientSecret"]!;
+
+        // Extra fields we want from GitHub
+        options.Scope.Add("user:email");
     });
+
 
 var app = builder.Build();
 

@@ -46,3 +46,12 @@
         public DateTime? UpdatedAt { get; set; }
     }
 }
+
+// Data received from Google/GitHub after successful login
+public class OidcUserDTO
+{
+    public string Email { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Provider { get; set; } = string.Empty;      // "Google" or "GitHub"
+    public string ProviderUserId { get; set; } = string.Empty; // unique ID from provider
+}

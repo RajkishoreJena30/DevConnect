@@ -9,6 +9,10 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AutoMapper;
+using DevConnect.Interfaces;
+using AspNet.Security.OAuth.GitHub;
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication;
 
 namespace DevConnect.Controllers
 {
@@ -19,12 +23,14 @@ namespace DevConnect.Controllers
         private readonly DevConnectDbContext _context;
         private readonly IConfiguration _config;
         private readonly IMapper _mapper;
+        private readonly IAuthService _authService;  // ← add this
 
-        public AuthController(DevConnectDbContext context, IConfiguration config, IMapper mapper)
+        public AuthController(DevConnectDbContext context, IConfiguration config, IMapper mapper, IAuthService authService)
         {
             _context = context;
             _config = config;
             _mapper = mapper;
+            _authService = authService;
         }
 
         // POST: api/auth/register
@@ -46,7 +52,7 @@ namespace DevConnect.Controllers
 
             return Ok(new AuthResponseDTO
             {
-                Token = GenerateToken(user),
+                Token = _authService.GenerateToken(user),
                 Name = user.Name,
                 Email = user.Email,
                 Role = user.Role
@@ -63,12 +69,110 @@ namespace DevConnect.Controllers
 
             return Ok(new AuthResponseDTO
             {
-                Token = GenerateToken(user),
+                Token = _authService.GenerateToken(user),
                 Name = user.Name,
                 Email = user.Email,
                 Role = user.Role
             });
         }
+
+
+        // GET: api/auth/google
+        // Redirects browser to Google login page
+        [HttpGet("google")]
+        public IActionResult GoogleLogin()
+        {
+            var props = new AuthenticationProperties
+            {
+                RedirectUri = Url.Action(nameof(GoogleCallback))  // where Google sends user back
+            };
+            return Challenge(props, GoogleDefaults.AuthenticationScheme);
+        }
+
+        // GET: api/auth/google/callback
+        // Google redirects here after successful login
+        [HttpGet("google/callback")]
+        public async Task<IActionResult> GoogleCallback()
+        {
+            // Read what Google sent back
+            var result = await HttpContext.AuthenticateAsync(GoogleDefaults.AuthenticationScheme);
+            if (!result.Succeeded)
+                return Unauthorized("Google login failed.");
+
+            // Extract claims from Google response
+            var claims = result.Principal?.Claims;
+            var email = claims?.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            var name = claims?.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value;
+            var googleId = claims?.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
+            if (email == null || googleId == null)
+                return BadRequest("Could not retrieve user info from Google.");
+
+            // Find existing user OR create new user in our DB
+            var user = await _authService.FindOrCreateOidcUserAsync(new OidcUserDTO
+            {
+                Email = email,
+                Name = name ?? email,
+                Provider = "Google",
+                ProviderUserId = googleId
+            });
+
+            // Return our own JWT token (same as local login)
+            return Ok(new AuthResponseDTO
+            {
+                Token = _authService.GenerateToken(user),
+                Name = user.Name,
+                Email = user.Email,
+                Role = user.Role
+            });
+        }
+
+        // GET: api/auth/github
+        [HttpGet("github")]
+        public IActionResult GitHubLogin()
+        {
+            var props = new AuthenticationProperties
+            {
+                RedirectUri = Url.Action(nameof(GitHubCallback))
+            };
+            return Challenge(props, GitHubAuthenticationDefaults.AuthenticationScheme);
+        }
+
+        // GET: api/auth/github/callback
+        [HttpGet("github/callback")]
+        public async Task<IActionResult> GitHubCallback()
+        {
+            var result = await HttpContext.AuthenticateAsync(
+                GitHubAuthenticationDefaults.AuthenticationScheme);
+
+            if (!result.Succeeded)
+                return Unauthorized("GitHub login failed.");
+
+            var claims = result.Principal?.Claims;
+            var email = claims?.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+            var name = claims?.FirstOrDefault(c => c.Type == ClaimTypes.Name)?.Value;
+            var githubId = claims?.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
+            if (email == null || githubId == null)
+                return BadRequest("Could not retrieve user info from GitHub.");
+
+            var user = await _authService.FindOrCreateOidcUserAsync(new OidcUserDTO
+            {
+                Email = email,
+                Name = name ?? email,
+                Provider = "GitHub",
+                ProviderUserId = githubId
+            });
+
+            return Ok(new AuthResponseDTO
+            {
+                Token = _authService.GenerateToken(user),
+                Name = user.Name,
+                Email = user.Email,
+                Role = user.Role
+            });
+        }
+
 
         private string GenerateToken(User user)
         {
@@ -95,5 +199,6 @@ namespace DevConnect.Controllers
 
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
+
     }
 }

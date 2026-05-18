@@ -10,6 +10,10 @@
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int Age { get; set; }
 
+        // OIDC fields
+        public string? Provider { get; set; }           // "Local", "Google", "GitHub"
+        public string? ProviderUserId { get; set; }     // ID from Google/GitHub
+
         // Navigation Property — One User has many Posts
         public List<Post> Posts { get; set; } = new();
         public ICollection<Like> Likes { get; set; }
