@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ── NUnit core ─────────────────────────────────────── -->
+    <PackageReference Include="NUnit"                            Version="4.2.2" />
+    <PackageReference Include="NUnit3TestAdapter"                Version="4.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk"          Version="17.11.1" />
+    <PackageReference Include="NUnit.Analyzers"                  Version="4.3.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector"               Version="6.0.0">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+
+    <!-- ── Mocking ───────────────────────────────────────── -->
+    <PackageReference Include="Moq"                              Version="4.20.72" />
+
+    <!-- ── AutoMapper ────────────────────────────────────── -->
+    <PackageReference Include="AutoMapper"                       Version="12.0.1" />
+    <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="7.0.0" />
+
+    <!-- ── FluentValidation ──────────────────────────────── -->
+    <PackageReference Include="FluentValidation"                 Version="11.0.1" />
+
+    <!-- ── EF Core providers ─────────────────────────────── -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore"            Version="9.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory"  Version="9.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.4" />
+
+    <!-- ── Testcontainers SQL Server ─────────────────────── -->
+    <PackageReference Include="Testcontainers.MsSql"             Version="3.9.0" />
+
+    <!-- ── ASP.NET Core test helpers ─────────────────────── -->
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.26" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
+
+    <!-- ── BCrypt ─────────────────────────────────────────── -->
+    <PackageReference Include="BCrypt.Net-Next"                  Version="3.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DevConnect\DevConnect.csproj" />
+  </ItemGroup>
+
+</Project>
