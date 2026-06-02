@@ -13,7 +13,20 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+
+using Serilog;
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json")
+        .Build())
+    .CreateBootstrapLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Host.UseSerilog((ctx, services, config) =>
+    config.ReadFrom.Configuration(ctx.Configuration)
+          .ReadFrom.Services(services));
 
 // Add services to the container.
 
@@ -125,6 +138,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 
+builder.Services.AddOutputCache(options =>
+{
+    options.AddPolicy("Posts", builder =>
+        builder.Expire(TimeSpan.FromSeconds(30))
+               .Tag("posts"));       // tag enables targeted invalidation
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -135,7 +155,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseSerilogRequestLogging(); // logs method, path, status, elapsed ms
 app.UseCors("AllowFrontend");  // Must be before Authentication & Authorization
+app.UseOutputCache();
 app.UseAuthentication();
 app.UseAuthorization();
 

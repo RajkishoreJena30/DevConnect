@@ -2,6 +2,7 @@ using DevConnect.DTOs;
 using DevConnect.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using System.Security.Claims;
 
 namespace DevConnect.Controllers
@@ -11,17 +12,27 @@ namespace DevConnect.Controllers
     public class PostsController : ControllerBase
     {
         private readonly IPostService _postService; // ← interface not concrete class
+        private readonly IOutputCacheStore _cache;
 
-        public PostsController(IPostService postService)
+
+        public PostsController(IPostService postService, IOutputCacheStore cache)
         {
             _postService = postService;
+            _cache = cache;
         }
 
+
+        //[HttpGet]
+        //public async Task<IActionResult> GetAll() =>
+        //    Ok(await _postService.GetAllPostsAsync());
+
         [HttpGet]
-        public async Task<IActionResult> GetAll() =>
-            Ok(await _postService.GetAllPostsAsync());
+        [OutputCache(PolicyName = "Posts")]
+        public async Task<IActionResult> GetAll([FromQuery] PostQueryParams query) =>
+              Ok(await _postService.GetPagedPostsAsync(query));
 
         [HttpGet("{id}")]
+        [OutputCache(PolicyName = "Posts")]
         public async Task<IActionResult> GetById(int id)
         {
             var post = await _postService.GetPostByIdAsync(id);
@@ -42,6 +53,7 @@ namespace DevConnect.Controllers
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var post = await _postService.CreatePostAsync(userId, dto);
+            await _cache.EvictByTagAsync("posts", HttpContext.RequestAborted);
             return CreatedAtAction(nameof(GetById), new { id = post.Id }, post);
         }
 
@@ -51,6 +63,7 @@ namespace DevConnect.Controllers
         {
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var result = await _postService.UpdatePostAsync(id, userId, dto);
+            if (result) await _cache.EvictByTagAsync("posts", HttpContext.RequestAborted);
             return result ? NoContent() : NotFound();
         }
 
@@ -61,6 +74,7 @@ namespace DevConnect.Controllers
             var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
             var role = User.FindFirstValue(ClaimTypes.Role)!;
             var result = await _postService.DeletePostAsync(id, userId, role);
+            if (result) await _cache.EvictByTagAsync("posts", HttpContext.RequestAborted);
             return result ? NoContent() : NotFound();
         }
     }

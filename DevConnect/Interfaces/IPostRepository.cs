@@ -1,4 +1,5 @@
-﻿using DevConnect.Models;
+﻿using DevConnect.DTOs;
+using DevConnect.Models;
 
 namespace DevConnect.Interfaces
 {
@@ -11,5 +12,6 @@ namespace DevConnect.Interfaces
         Task UpdateAsync(Post post);
         Task DeleteAsync(Post post);
         Task<bool> ExistsAsync(int id);
+        Task<(List<Post> Posts, int TotalCount)> GetPagedAsync(PostQueryParams query);
     }
 }

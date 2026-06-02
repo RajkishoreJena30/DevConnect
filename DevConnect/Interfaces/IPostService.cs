@@ -10,5 +10,6 @@ namespace DevConnect.Interfaces
         Task<PostResponseDTO> CreatePostAsync(int userId, CreatePostDTO dto);
         Task<bool> UpdatePostAsync(int postId, int userId, CreatePostDTO dto);
         Task<bool> DeletePostAsync(int postId, int userId, string role);
+        Task<PagedResult<PostResponseDTO>> GetPagedPostsAsync(PostQueryParams query);
     }
 }

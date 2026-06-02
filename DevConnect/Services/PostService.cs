@@ -69,5 +69,25 @@ namespace DevConnect.Services
             await _repo.DeleteAsync(post);
             return true;
         }
+
+
+        public async Task<PagedResult<PostResponseDTO>> GetPagedPostsAsync(PostQueryParams query)
+        {
+            // Clamp to safe bounds
+            query.PageNumber = Math.Max(1, query.PageNumber);
+            query.PageSize = Math.Clamp(query.PageSize, 1, 100);
+
+            var (posts, totalCount) = await _repo.GetPagedAsync(query);
+
+            return new PagedResult<PostResponseDTO>
+            {
+                Items = _mapper.Map<List<PostResponseDTO>>(posts),
+                TotalCount = totalCount,
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize
+            };
+        }
+
+
     }
 }
