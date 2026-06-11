@@ -1,5 +1,29 @@
 # C# Beginner Concepts with Examples
 
+## Table of Contents
+
+- [1. Hello World](#1-hello-world)
+- [2. Variables & Data Types](#2-variables--data-types)
+- [3. Type Conversion](#3-type-conversion)
+- [4. Operators](#4-operators)
+- [5. String Methods](#5-string-methods)
+- [6. Conditional Statements](#6-conditional-statements)
+- [7. Loops](#7-loops)
+- [8. Arrays](#8-arrays)
+- [9. Methods (Functions)](#9-methods-functions)
+- [10. Object Oriented Programming (OOP)](#10-object-oriented-programming-oop)
+- [10.1 Classes & Objects](#101-classes--objects)
+- [10.2 Encapsulation](#102-encapsulation)
+- [10.3 Inheritance](#103-inheritance)
+- [10.4 Polymorphism](#104-polymorphism)
+- [10.5 Abstraction](#105-abstraction)
+- [10.6 Interfaces](#106-interfaces)
+- [11. Collections](#11-collections)
+- [12. Exception Handling](#12-exception-handling)
+- [13. Nullable Types](#13-nullable-types)
+- [14. File I/O Basics](#14-file-io-basics)
+- [15. var and Type Inference](#15-var-and-type-inference)
+
 ---
 
 ## 1. Hello World

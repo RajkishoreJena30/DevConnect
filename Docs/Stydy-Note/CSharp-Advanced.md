@@ -1,5 +1,31 @@
 # C# Advanced Concepts with Examples
 
+## Table of Contents
+
+- [1. Generics](#1-generics)
+- [2. Delegates & Events](#2-delegates--events)
+- [Delegates](#delegates)
+- [Events](#events)
+- [3. Lambda Expressions & LINQ](#3-lambda-expressions--linq)
+- [Lambda Expressions](#lambda-expressions)
+- [LINQ (Language Integrated Query)](#linq-language-integrated-query)
+- [4. Async / Await & Task Parallel Library](#4-async--await--task-parallel-library)
+- [5. Extension Methods](#5-extension-methods)
+- [6. Pattern Matching](#6-pattern-matching)
+- [7. Records](#7-records)
+- [8. Dependency Injection (DI)](#8-dependency-injection-di)
+- [9. Reflection](#9-reflection)
+- [10. Span\<T\> and Memory\<T\>](#10-spant-and-memoryt)
+- [11. Expression Trees](#11-expression-trees)
+- [12. Channels (Producer-Consumer)](#12-channels-producer-consumer)
+- [13. IDisposable & using Statement](#13-idisposable--using-statement)
+- [14. Source Generators & Attributes (Overview)](#14-source-generators--attributes-overview)
+- [15. Advanced OOP: Interfaces (Advanced Patterns)](#15-advanced-oop-interfaces-advanced-patterns)
+- [Interface Segregation & Composition](#interface-segregation--composition)
+- [Abstract Factory Pattern](#abstract-factory-pattern)
+- [Strategy Pattern](#strategy-pattern)
+- [16. C# 12 / .NET 8 Modern Features](#16-c-12--net-8-modern-features)
+
 ---
 
 ## 1. Generics

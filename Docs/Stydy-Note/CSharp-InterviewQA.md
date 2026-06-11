@@ -2,8 +2,17 @@
 
 > Most frequently asked C# and .NET interview questions, from beginner to advanced level.
 
+## Table of Contents
+
+- [BASICS](#basics)
+- [OBJECT ORIENTED PROGRAMMING](#object-oriented-programming)
+- [INTERMEDIATE](#intermediate)
+- [ADVANCED](#advanced)
+- [QUICK-FIRE QUESTIONS](#quick-fire-questions)
+
 ---
 
+<a id="basics"></a>
 ## 📘 BASICS
 
 ### Q1. What is C#? What are its key features?
@@ -106,6 +115,7 @@ string result2 = sb.ToString();
 
 ---
 
+<a id="object-oriented-programming"></a>
 ## 🔷 OBJECT ORIENTED PROGRAMMING
 
 ### Q6. Explain the four pillars of OOP with examples.
@@ -240,6 +250,7 @@ sealed class FinalClass
 
 ---
 
+<a id="intermediate"></a>
 ## 🔶 INTERMEDIATE
 
 ### Q11. What is the difference between `struct` and `class`?
@@ -417,6 +428,7 @@ builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
 ---
 
+<a id="advanced"></a>
 ## 🔴 ADVANCED
 
 ### Q21. What is the difference between `Scoped`, `Transient`, and `Singleton` DI lifetimes?
@@ -719,6 +731,7 @@ async void Button_Click(object s, EventArgs e) { await DoWorkAsync(); }
 
 ---
 
+<a id="quick-fire-questions"></a>
 ## 💡 QUICK-FIRE QUESTIONS
 
 | Question | Answer |
