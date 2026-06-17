@@ -134,7 +134,7 @@ Console.WriteLine(text.ToLower());           // "  hello, c# world!  "
 Console.WriteLine(text.Contains("C#"));      // True
 Console.WriteLine(text.Replace("World", "Universe"));
 Console.WriteLine(text.Length);              // 20
-Console.WriteLine(text.Substring(7, 2));     // "C#"
+Console.WriteLine(text.Substring(9, 2));     // "C#"  (index 9 = 'C', index 10 = '#')
 Console.WriteLine(text.StartsWith("  He")); // True
 
 // String interpolation

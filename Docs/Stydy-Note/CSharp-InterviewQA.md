@@ -81,12 +81,13 @@ Console.WriteLine(a.Equals(b));    // True
 
 object x = 42;
 object y = 42;
-Console.WriteLine(x == y);         // True (same boxed value in many cases)
-Console.WriteLine(x.Equals(y));    // True
+Console.WriteLine(x == y);         // False — two separate boxed objects, so == compares references
+Console.WriteLine(x.Equals(y));    // True  — Equals compares the underlying int values
 ```
 
 - `==` for strings compares **content** (overloaded).
 - For custom classes, `==` compares **reference** by default.
+- When two value types are **boxed** into `object`, `==` compares references (usually `false`), while `.Equals()` compares values.
 - `.Equals()` can be **overridden** for value equality.
 - `ReferenceEquals()` always compares memory addresses.
 

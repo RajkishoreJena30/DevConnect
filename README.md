@@ -209,3 +209,22 @@ DevConnect/
 2. Call `POST /api/auth/login` to get a token
 3. Click **Authorize** in Swagger and enter: `Bearer <your-token>`
 4. All `[Authorize]` endpoints are now accessible
+
+
+## Building a Developer Platform with ASP.NET Core and Next.js
+- JWT Authentication in ASP.NET Core: What I Implemented and Why
+- How I Designed Posts, Likes, and Comments APIs for DevConnect
+- Lessons from Connecting a Next.js Frontend to a .NET Backend
+- Common CORS Problems in Local Development and How I Fixed Them
+- Using DTOs and AutoMapper to Keep ASP.NET Core APIs Clean
+- What I Learned While Building a Multi-Page Developer Community App
+- Why Public Preview and Protected Content Works Well for Developer Platforms
+- My Approach to Structuring Controllers, Services, and Repositories in .NET
+- Problems I Faced While Fetching Local APIs in Next.js
+- If you want practical posts, these are the best:
+
+- How I Built JWT Login and Registration in ASP.NET Core
+- Implementing Likes and Comments for a Developer Community App
+- Fixing Localhost Fetch Issues Between Next.js and ASP.NET Core
+- Designing a Better Developer Dashboard UI
+- From Single Page to Multi-Page App: Refactoring My Next.js Frontend
