@@ -32,6 +32,8 @@ C# is a strongly-typed, object-oriented programming language developed by Micros
 
 ### Q2. What is the difference between `value types` and `reference types`?
 
+**Answer:** A **value type** holds its data directly and is copied on assignment, while a **reference type** holds a reference (pointer) to data on the heap, so copies share the same object. This distinction affects memory, performance, and how changes propagate.
+
 | Feature        | Value Type                        | Reference Type                    |
 |----------------|-----------------------------------|-----------------------------------|
 | Stored in      | Stack                             | Heap                              |
@@ -72,6 +74,8 @@ int unboxed = (int)boxed; // Unboxing
 
 ### Q4. What is the difference between `==` and `.Equals()`?
 
+**Answer:** `==` is an operator that, by default, compares **references** for classes (and values for primitives), and can be overloaded. `.Equals()` is a virtual method that can be **overridden** to define value equality. The behavior differs notably for strings and boxed value types.
+
 ```csharp
 string a = new string("hello".ToCharArray());
 string b = new string("hello".ToCharArray());
@@ -94,6 +98,8 @@ Console.WriteLine(x.Equals(y));    // True  — Equals compares the underlying i
 ---
 
 ### Q5. What is `string` vs `StringBuilder`?
+
+**Answer:** A `string` is **immutable** — every modification creates a new object, which is wasteful in loops. `StringBuilder` is a **mutable** buffer designed for efficient repeated concatenation/modification.
 
 | Feature     | `string`                    | `StringBuilder`              |
 |-------------|-----------------------------|------------------------------|
@@ -165,6 +171,8 @@ class Circle : Shape
 
 ### Q7. What is the difference between `abstract class` and `interface`?
 
+**Answer:** An **abstract class** is a partially-implemented base class (an "is-a" relationship) that can hold fields, constructors, and concrete methods, but supports only single inheritance. An **interface** is a pure contract (a "can-do" relationship) that a class can implement many of.
+
 | Feature                  | Abstract Class               | Interface                          |
 |--------------------------|------------------------------|------------------------------------|
 | Instantiation            | ❌ Cannot                    | ❌ Cannot                          |
@@ -197,6 +205,8 @@ class Duck : Animal, ISwimmable, IFlyable
 ---
 
 ### Q8. What is the difference between `override` and `new` keyword?
+
+**Answer:** `override` replaces a `virtual` base method so the **derived** version is called even through a base reference (runtime polymorphism). `new` *hides* the base member — which version runs depends on the **compile-time** type of the reference, not the actual object.
 
 ```csharp
 class Base
@@ -240,6 +250,8 @@ sealed class FinalClass
 
 ### Q10. What are access modifiers in C#?
 
+**Answer:** Access modifiers are keywords that control the **visibility** (accessibility) of types and members — they enforce encapsulation by deciding which code can reach a given class, method, or field.
+
 | Modifier             | Accessible From                                  |
 |----------------------|--------------------------------------------------|
 | `public`             | Everywhere                                       |
@@ -255,6 +267,8 @@ sealed class FinalClass
 ## 🔶 INTERMEDIATE
 
 ### Q11. What is the difference between `struct` and `class`?
+
+**Answer:** A `struct` is a **value type** (stored inline, copied on assignment, no inheritance) best for small, short-lived data; a `class` is a **reference type** (heap-allocated, supports inheritance and polymorphism) best for larger, shareable objects.
 
 | Feature         | `struct`          | `class`           |
 |-----------------|-------------------|-------------------|
@@ -273,6 +287,8 @@ class Rectangle { public int Width, Height; }
 ---
 
 ### Q12. What is `readonly` vs `const`?
+
+**Answer:** A `const` is a compile-time constant baked into the calling code and must be a primitive/string literal. A `readonly` field is set **at runtime** (inline or in the constructor) and can be any type, including objects — useful when the value isn't known until execution.
 
 | Feature      | `const`                        | `readonly`                      |
 |--------------|--------------------------------|---------------------------------|
@@ -316,6 +332,8 @@ Delegates support multicast, anonymous methods, and lambdas — making them idea
 
 ### Q14. What are the differences between `IEnumerable`, `ICollection`, and `IList`?
 
+**Answer:** These interfaces form a hierarchy of increasing capability: `IEnumerable<T>` only supports forward iteration, `ICollection<T>` adds `Count` and add/remove, and `IList<T>` adds index-based access. Depend on the smallest one that meets your needs.
+
 | Interface       | Read | Count | Add/Remove | Index Access |
 |-----------------|------|-------|------------|--------------|
 | `IEnumerable<T>`| ✅   | ❌    | ❌         | ❌           |
@@ -325,6 +343,8 @@ Delegates support multicast, anonymous methods, and lambdas — making them idea
 ---
 
 ### Q15. What is the difference between `throw` and `throw ex`?
+
+**Answer:** `throw;` rethrows the **current** exception while preserving its original stack trace, whereas `throw ex;` resets the stack trace to the current line — losing the information about where the error truly originated.
 
 ```csharp
 try { SomeMethod(); }
@@ -363,6 +383,8 @@ var query = from n in numbers
 ---
 
 ### Q17. What is the difference between `First()`, `FirstOrDefault()`, `Single()`, `SingleOrDefault()`?
+
+**Answer:** These LINQ operators retrieve a single element but differ in how they handle "no match" and "multiple matches." Use `First*` when you expect one-or-more and want the first; use `Single*` when you expect **exactly one** (it validates uniqueness). The `*OrDefault` variants return the type's default instead of throwing when nothing matches.
 
 | Method              | No match        | Multiple matches |
 |---------------------|-----------------|------------------|
@@ -469,6 +491,8 @@ using var conn = new SqlConnection(connectionString);
 
 ### Q23. What is the difference between `Finalize` and `Dispose`?
 
+**Answer:** Both release resources, but `Finalize` (the `~Destructor`) is called **non-deterministically by the GC** as a safety net for unmanaged resources, while `Dispose` is called **explicitly** by the developer (or a `using` block) for immediate, deterministic cleanup. Prefer `Dispose`; use a finalizer only as a backup.
+
 | Feature     | `Finalize` (`~Destructor`)  | `Dispose` (IDisposable)     |
 |-------------|-----------------------------|-----------------------------|
 | Called by   | GC (non-deterministic)      | Developer / `using` block   |
@@ -497,6 +521,8 @@ type.GetMethod("Run")?.Invoke(instance, null);
 ---
 
 ### Q25. What is `IQueryable` vs `IEnumerable` in Entity Framework?
+
+**Answer:** `IEnumerable<T>` executes queries **in memory** (LINQ-to-Objects) — it pulls all data first, then filters client-side. `IQueryable<T>` builds an expression tree that is **translated to SQL** and executed on the database server, fetching only the rows needed — far more efficient for large datasets.
 
 | Feature         | `IEnumerable<T>`                 | `IQueryable<T>`                        |
 |-----------------|----------------------------------|----------------------------------------|

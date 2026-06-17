@@ -30,7 +30,11 @@
 
 ## 1. Generics
 
-Generics allow you to write type-safe, reusable code without committing to a specific data type.
+Generics allow you to write type-safe, reusable code without committing to a specific data type. The actual type is supplied later as a *type parameter* (`<T>`), so one definition works for many types while keeping full compile-time type checking.
+
+- Avoids boxing and casting (better performance and safety than using `object`).
+- Works on classes, interfaces, methods, and delegates.
+- **Constraints** (`where T : class`, `where T : new()`, etc.) restrict what types `T` can be.
 
 ```csharp
 // Generic method
@@ -74,7 +78,10 @@ class ServiceBase<T> where T : class, new()
 
 ### Delegates
 
-A delegate is a type-safe function pointer.
+A delegate is a type-safe function pointer — a type that holds a reference to a method with a matching signature, so methods can be passed around as values (for callbacks, events, and LINQ).
+
+- **Multicast** — a delegate can reference multiple methods invoked in sequence (`+=`).
+- **Built-in delegates:** `Func<...>` (returns a value), `Action<...>` (returns void), `Predicate<T>` (returns bool).
 
 ```csharp
 // Declare delegate
@@ -101,6 +108,12 @@ Predicate<int> isEven = n => n % 2 == 0;
 ```
 
 ### Events
+
+**Definition:** An event is a messaging mechanism built on delegates that lets a class (the *publisher*) notify other classes (the *subscribers*) when something happens. Subscribers attach handlers with `+=` and detach with `-=`; only the publisher can raise (invoke) the event.
+
+- Built on delegates but safer — outside code can subscribe/unsubscribe but cannot invoke or overwrite the handler list.
+- `EventHandler` / `EventHandler<T>` are the standard delegate signatures `(object? sender, EventArgs e)`.
+- Use a custom `EventArgs` subclass to pass extra data with the event.
 
 ```csharp
 class Button
@@ -155,6 +168,12 @@ class OrderService
 
 ### Lambda Expressions
 
+**Definition:** A lambda is a concise, anonymous (unnamed) function written with the `=>` operator. Lambdas are commonly passed to methods (especially LINQ) as inline behavior.
+
+- **Expression lambda** — `x => x * x` returns the result of a single expression.
+- **Statement lambda** — `(a, b) => { ... }` contains a block with multiple statements.
+- **Closure** — a lambda can "capture" and use variables from its surrounding scope.
+
 ```csharp
 // Expression lambda
 Func<int, int> square = x => x * x;
@@ -174,6 +193,12 @@ Console.WriteLine(triple(5));  // 15
 ```
 
 ### LINQ (Language Integrated Query)
+
+**Definition:** LINQ lets you query and transform data (collections, databases, XML) using a consistent, readable syntax directly in C#. Operations are usually **deferred** — they execute only when the results are enumerated.
+
+- **Method syntax** — chained calls like `.Where(...).Select(...)` using lambdas.
+- **Query syntax** — SQL-like `from ... where ... select ...`.
+- Common operators: filtering (`Where`), projection (`Select`), ordering (`OrderBy`), grouping (`GroupBy`), joining (`Join`), and aggregation (`Sum`, `Average`, `Count`).
 
 ```csharp
 using System.Linq;
@@ -241,6 +266,14 @@ var joined = from p in products
 ---
 
 ## 4. Async / Await & Task Parallel Library
+
+**Definition:** `async`/`await` enables non-blocking asynchronous programming. Instead of blocking a thread while waiting for I/O (network, disk, database), `await` releases the thread and resumes the method when the awaited `Task` completes — keeping apps responsive and scalable.
+
+- **`Task` / `Task<T>`** — represents an ongoing operation that may produce a result.
+- **`Task.WhenAll`** — runs multiple tasks concurrently and waits for all to finish.
+- **`Task.WhenAny`** — completes when the first of several tasks finishes.
+- **`CancellationToken`** — cooperatively cancels long-running operations.
+- Avoid `.Result`/`.Wait()` on tasks — they block and can deadlock.
 
 ```csharp
 using System.Threading.Tasks;
@@ -310,6 +343,12 @@ catch (OperationCanceledException)
 
 ## 5. Extension Methods
 
+**Definition:** Extension methods let you add new methods to an existing type (even one you can't modify, like `string`) without inheriting from it or changing its source. They are `static` methods in a `static` class whose first parameter uses the `this` modifier.
+
+- Called as if they were instance methods: `"racecar".IsPalindrome()`.
+- The `this` keyword on the first parameter marks which type is being extended.
+- LINQ itself is built entirely from extension methods on `IEnumerable<T>`.
+
 ```csharp
 // Must be in a static class
 static class StringExtensions
@@ -346,6 +385,13 @@ Console.WriteLine("Hello World".Truncate(5));        // Hello...
 ---
 
 ## 6. Pattern Matching
+
+**Definition:** Pattern matching tests a value against a *pattern* (type, value, shape, or condition) and can extract data in the process. It makes branching logic more concise and expressive, especially inside `switch` expressions.
+
+- **Type pattern** — `obj is string str` checks the type and assigns it in one step.
+- **Property pattern** — matches on an object's property values (`{ X: > 0, Y: > 0 }`).
+- **Tuple pattern** — matches multiple values at once.
+- **List pattern (C# 11)** — matches the shape of a collection (`[1, .., 3]`).
 
 ```csharp
 // Type pattern
@@ -395,7 +441,11 @@ if (arr is [1, .., 3])
 
 ## 7. Records
 
-Records are immutable reference types with value-based equality.
+Records are immutable reference types with value-based equality. Designed for data-centric models, two records are equal when all their properties are equal (not when they're the same reference like normal classes).
+
+- **Positional syntax** (`record Person(...)`) auto-generates properties, constructor, equality, and `ToString`.
+- **`with` expressions** create a modified copy without mutating the original (non-destructive mutation).
+- **`record struct`** (C# 10) gives the same value-equality behavior as a value type.
 
 ```csharp
 // Record declaration (positional)
@@ -431,6 +481,12 @@ record MutablePerson
 ---
 
 ## 8. Dependency Injection (DI)
+
+**Definition:** Dependency Injection is a design pattern where a class receives the objects it depends on from the outside (typically via its constructor) instead of creating them itself. This produces loosely coupled, testable, maintainable code.
+
+- Classes depend on **abstractions** (interfaces), not concrete types.
+- A **DI container** (built into ASP.NET Core) creates and supplies dependencies automatically.
+- **Lifetimes:** `Singleton` (one for the app), `Scoped` (one per request), `Transient` (a new one every time).
 
 ```csharp
 // Interfaces
@@ -480,6 +536,13 @@ builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 ---
 
 ## 9. Reflection
+
+**Definition:** Reflection is the ability to inspect type metadata (classes, properties, methods, attributes) and to create objects or invoke members **dynamically at runtime**, rather than at compile time.
+
+- Get type info with `typeof(T)` or `obj.GetType()`.
+- Create instances dynamically via `Activator.CreateInstance`.
+- Read custom attributes — the foundation of serializers, ORMs, DI containers, and test frameworks.
+- Powerful but slower than direct calls; cache reflected members when used repeatedly.
 
 ```csharp
 using System.Reflection;
@@ -539,7 +602,11 @@ Console.WriteLine(attr?.ErrorMessage);  // Name is required.
 
 ## 10. Span\<T\> and Memory\<T\>
 
-High-performance, zero-allocation slicing of memory.
+High-performance, zero-allocation slicing of memory. `Span<T>` is a lightweight "window" over contiguous memory (arrays, stack memory, strings) that lets you work with slices **without copying** data.
+
+- `Span<T>` is stack-only (can't be stored on the heap or used in async methods); `Memory<T>` is the heap-friendly counterpart that works with `async`.
+- Ideal for parsing and high-performance code where avoiding allocations matters.
+- A slice shares the same underlying memory — modifying the span modifies the original data.
 
 ```csharp
 using System;
@@ -572,6 +639,12 @@ Console.WriteLine(namePart.ToString());  // "name=Alice"
 
 ## 11. Expression Trees
 
+**Definition:** An expression tree represents code as a **data structure** (a tree of objects) instead of compiled IL. This lets a program inspect, modify, or translate the logic at runtime — for example, ORMs like Entity Framework convert lambda expression trees into SQL.
+
+- Build trees manually with the `Expression` factory methods, or capture them via `Expression<Func<...>>`.
+- Call `.Compile()` to turn a tree into an executable delegate.
+- Enable dynamic query building (e.g., filtering by a property name known only at runtime).
+
 ```csharp
 using System.Linq.Expressions;
 
@@ -603,6 +676,12 @@ static IQueryable<T> Filter<T>(IQueryable<T> source, string propName, object val
 
 ## 12. Channels (Producer-Consumer)
 
+**Definition:** `System.Threading.Channels` provides a thread-safe, async-friendly way to pass data between producers (writers) and consumers (readers) — an in-memory pipeline for the producer-consumer pattern.
+
+- The **writer** adds items (`WriteAsync`) and signals completion (`Complete`).
+- The **reader** consumes items asynchronously (`ReadAllAsync`).
+- **Bounded** channels apply backpressure (limit capacity); **unbounded** ones grow freely.
+
 ```csharp
 using System.Threading.Channels;
 
@@ -633,6 +712,12 @@ await Task.WhenAll(ProduceAsync(), ConsumeAsync());
 ---
 
 ## 13. IDisposable & using Statement
+
+**Definition:** `IDisposable` defines a `Dispose()` method for deterministically releasing **unmanaged resources** (file handles, database connections, sockets) that the garbage collector won't clean up promptly. The `using` statement guarantees `Dispose()` is called automatically.
+
+- `using (var x = ...) { }` disposes `x` at the end of the block, even if an exception is thrown.
+- The **dispose pattern** (`Dispose(bool)`) separates managed vs unmanaged cleanup and works with a finalizer (`~Type`).
+- `using` declarations (C# 8+) dispose at the end of the enclosing scope without braces.
 
 ```csharp
 // Implementing IDisposable
@@ -681,6 +766,12 @@ conn2.Open();
 
 ## 14. Source Generators & Attributes (Overview)
 
+**Definition:** **Attributes** attach declarative metadata to code (classes, methods, properties) that can be read at runtime via reflection or at compile time by tooling. **Source generators** run during compilation to inspect that metadata and emit additional C# code automatically — reducing boilerplate without runtime cost.
+
+- Define a custom attribute by inheriting from `Attribute`; `[AttributeUsage]` controls where it can be applied.
+- **Caller info attributes** (`CallerMemberName`, `CallerLineNumber`) let the compiler auto-fill debugging context.
+- Source generators power features like JSON serialization and logging with zero reflection at runtime.
+
 ```csharp
 // Custom attribute for documentation/code gen purposes
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
@@ -715,7 +806,11 @@ static void LogCall(
 
 ## 15. Advanced OOP: Interfaces (Advanced Patterns)
 
+**Definition:** Beyond basic contracts, interfaces enable powerful design patterns that promote flexibility and loose coupling. These patterns apply SOLID principles to keep code extensible and maintainable.
+
 ### Interface Segregation & Composition
+
+**Definition:** The Interface Segregation Principle says clients shouldn't be forced to depend on methods they don't use. Prefer many small, focused interfaces over one large "fat" interface, then compose them as needed. C# 8+ also allows **default interface methods** (a body in the interface).
 
 ```csharp
 // Instead of one fat interface, use many small ones
@@ -740,6 +835,8 @@ class FileLogger : ILogger
 ```
 
 ### Abstract Factory Pattern
+
+**Definition:** The Abstract Factory provides an interface for creating *families* of related objects without specifying their concrete classes. The client works only with interfaces, so swapping the whole family (e.g., Windows vs Mac UI) is a one-line change.
 
 ```csharp
 interface IButton { void Render(); }
@@ -770,6 +867,8 @@ class MacFactory : IUIFactory
 ```
 
 ### Strategy Pattern
+
+**Definition:** The Strategy pattern defines a family of interchangeable algorithms behind a common interface and lets you select one at runtime. The context delegates the work to whichever strategy is plugged in, so behavior can change without modifying the context.
 
 ```csharp
 interface ISortStrategy
@@ -810,6 +909,14 @@ class Sorter
 ---
 
 ## 16. C# 12 / .NET 8 Modern Features
+
+**Definition:** Recent C# versions added syntax that reduces boilerplate and improves expressiveness. Highlights below:
+
+- **Primary constructors (C# 12)** — declare constructor parameters right on the class, usable throughout it.
+- **Collection expressions (C# 12)** — a unified `[...]` syntax to create arrays, lists, and spans, with a spread operator (`..`).
+- **Required members (C# 11)** — `required` forces callers to set a property during initialization.
+- **Raw string literals (C# 11)** — `""" ... """` for multi-line text with no escaping (great for JSON).
+- **Generic math (C# 11)** — constrain on `INumber<T>` to write numeric algorithms for any number type.
 
 ```csharp
 // Primary constructors (C# 12)
