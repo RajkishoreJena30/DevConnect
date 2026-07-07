@@ -118,6 +118,7 @@ flowchart TD
 | [Docs/AuthSecurity.md](AuthSecurity.md) | Authentication and security notes, including JWT and identity flow. |
 | [Docs/CORS.md](CORS.md) | Explains Cross-Origin Resource Sharing setup and behavior in the API. |
 | [Docs/Database.md](Database.md) | Database and Entity Framework Core notes for the project. |
+| [Docs/RequestFlow.md](RequestFlow.md) | End-to-end API request flow: Program.cs → middleware → controller → service → repository → DB. |
 | [Docs/Notes.md](Notes.md) | General development notes collected while building the API. |
 
 ### Docs/Study-Note

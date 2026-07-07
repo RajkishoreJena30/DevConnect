@@ -4,6 +4,34 @@ A learning project built with ASP.NET Core Web API, Entity Framework Core, and J
 
 ---
 
+## Tech Stack
+
+The table below reflects what is **actually used in this repository** today. Rows marked _Not yet_ are common in production systems but are not part of this project (yet).
+
+| Layer | Technology in This Repo | Notes |
+|-------|-------------------------|-------|
+| **Language** | C# 12 | Default language version for `net8.0` |
+| **Runtime** | .NET 8 (`net8.0`) | API and test projects both target `net8.0` |
+| **API** | ASP.NET Core Web API | `Microsoft.NET.Sdk.Web`, controller-based |
+| **Frontend** | Next.js 16 · React 19 · TypeScript 5 · Tailwind CSS 4 | `devconnectwebapp/` |
+| **Database** | SQL Server | `UseSqlServer` (no PostgreSQL) |
+| **ORM** | Entity Framework Core 9 | Two DbContexts: `FirstAPIContext`, `DevConnectDbContext` (no Dapper) |
+| **Authentication** | JWT Bearer + Google OIDC + GitHub OAuth2 | Passwords hashed with BCrypt.Net |
+| **Validation** | FluentValidation 11 | `Validators/` |
+| **Object Mapping** | AutoMapper 12 | `Mappings/MappingProfile.cs` |
+| **Caching** | ASP.NET Core Output Cache (in-memory) | `"Posts"` policy, 30s expiry, tag-based invalidation (no Redis) |
+| **Logging / Observability** | Serilog | Console + File sinks; request logging (no OpenTelemetry/Grafana/Prometheus) |
+| **API Docs** | Swagger / Swashbuckle (OpenAPI) | JWT-enabled Swagger UI |
+| **Testing** | NUnit 4 · Moq · EF Core InMemory · Testcontainers (SQL Server) · Coverlet | `DevConnect.Tests/` |
+| **Containerization** | Docker — integration tests only | Testcontainers spins up SQL Server; no app `Dockerfile` yet |
+| **API Gateway** | _Not yet_ | No YARP / Kong / NGINX |
+| **Messaging** | _Not yet_ | No RabbitMQ / Kafka |
+| **Orchestration** | _Not yet_ | No Kubernetes |
+| **Cloud** | _Not yet_ | No Azure / AWS deployment |
+| **CI/CD** | _Not yet_ | No GitHub Actions / Azure DevOps pipeline |
+
+---
+
 ## Concepts Covered
 
 📄 See detailed notes: [Docs/Notes.md](Docs/Notes.md)  
