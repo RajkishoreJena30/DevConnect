@@ -15,7 +15,6 @@ export default function ProfileCard(props: ProfileCardProps) {
     <>
       <div>
         <h2 className="section-title">Profile</h2>
-        <p className="meta">Uses /api/users/profile</p>
       </div>
 
       <form onSubmit={props.onSubmit} className="stack">

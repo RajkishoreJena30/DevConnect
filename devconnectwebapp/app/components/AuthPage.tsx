@@ -51,7 +51,7 @@ export default function AuthPage({ mode, redirect }: AuthPageProps) {
     <section className="auth-shell route-frame">
       <div className="panel auth-panel">
         <div className="stack">
-          <span className="tag">Connected to {getApiBaseUrl()}</span>
+          {/* <span className="tag">Connected to {getApiBaseUrl()}</span> */}
           <h1 className="auth-title">{mode === "login" ? "Welcome back" : "Create your developer account"}</h1>
           <p className="meta">
             {mode === "login"
