@@ -42,6 +42,8 @@ export default function DashboardPage() {
   const [commentDrafts, setCommentDrafts] = useState<Record<number, string>>({});
   const [busyCommentPostId, setBusyCommentPostId] = useState<number | null>(null);
   const [busyLikePostId, setBusyLikePostId] = useState<number | null>(null);
+  const [bookmarkedByPostId, setBookmarkedByPostId] = useState<Record<number, boolean>>({});
+  const [busyBookmarkPostId, setBusyBookmarkPostId] = useState<number | null>(null);
 
   useEffect(() => {
     void loadFeed();
@@ -64,6 +66,26 @@ export default function DashboardPage() {
         paged.items.map(async (post) => [post.id, await api.getLikes(post.id, authData?.token)] as const)
       );
       setLikesByPostId(Object.fromEntries(entries));
+
+      if (authData?.token) {
+        try {
+          const saved = await api.getMyBookmarks(authData.token, {
+            pageNumber: 1,
+            pageSize: 100,
+            sortBy: "createdAt",
+            sortDirection: "desc",
+          });
+          const savedMap: Record<number, boolean> = {};
+          for (const savedPost of saved.items) {
+            savedMap[savedPost.id] = true;
+          }
+          setBookmarkedByPostId(savedMap);
+        } catch {
+          // Bookmarks are non-critical for the feed; ignore load failures.
+        }
+      } else {
+        setBookmarkedByPostId({});
+      }
     } catch (error) {
       setFeedError(getErrorText(error));
     } finally {
@@ -109,6 +131,23 @@ export default function DashboardPage() {
       setFeedError(getErrorText(error));
     } finally {
       setBusyLikePostId(null);
+    }
+  }
+
+  async function onToggleBookmark(postId: number) {
+    if (!authData?.token) {
+      setFeedError("Please log in to save posts.");
+      return;
+    }
+
+    try {
+      setBusyBookmarkPostId(postId);
+      const result = await api.toggleBookmark(postId, authData.token);
+      setBookmarkedByPostId((current) => ({ ...current, [postId]: result.bookmarked }));
+    } catch (error) {
+      setFeedError(getErrorText(error));
+    } finally {
+      setBusyBookmarkPostId(null);
     }
   }
 
@@ -195,6 +234,8 @@ export default function DashboardPage() {
           commentDrafts={commentDrafts}
           busyCommentPostId={busyCommentPostId}
           busyLikePostId={busyLikePostId}
+          bookmarkedByPostId={bookmarkedByPostId}
+          busyBookmarkPostId={busyBookmarkPostId}
           onSortByChange={(value) => {
             setPageNumber(1);
             setSortBy(value);
@@ -205,6 +246,7 @@ export default function DashboardPage() {
           }}
           onRefresh={() => void loadFeed()}
           onToggleLike={onToggleLike}
+          onToggleBookmark={onToggleBookmark}
           onToggleComments={onToggleComments}
           onCommentDraftChange={(postId, value) =>
             setCommentDrafts((current) => ({ ...current, [postId]: value }))

@@ -154,6 +154,16 @@ builder.Services.AddOutputCache(options =>
 
 var app = builder.Build();
 
+// Apply EF Core migrations at startup when enabled (used by Docker/CI).
+// Local runs are unaffected unless RunMigrationsAtStartup=true is set.
+// if (app.Configuration.GetValue<bool>("RunMigrationsAtStartup"))
+// {
+//     using var scope = app.Services.CreateScope();
+//     var services = scope.ServiceProvider;
+//     services.GetRequiredService<FirstAPIContext>().Database.Migrate();
+//     services.GetRequiredService<DevConnectDbContext>().Database.Migrate();
+// }
+
 // Catch all unhandled exceptions and return a generic error response
 //app.UseExceptionHandler();
 

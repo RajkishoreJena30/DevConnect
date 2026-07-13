@@ -11,6 +11,7 @@ export default function PostDetailScreen({ postId }: { postId: number }) {
   const [post, setPost] = useState<PostResponse | null>(null);
   const [likes, setLikes] = useState<LikeResponse | null>(null);
   const [comments, setComments] = useState<CommentResponse[]>([]);
+  const [bookmarked, setBookmarked] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -26,8 +27,19 @@ export default function PostDetailScreen({ postId }: { postId: number }) {
       api.getPostById(postId),
       api.getLikes(postId, authData?.token),
       api.getComments(postId),
+      authData?.token
+        ? api
+            .getMyBookmarks(authData.token, {
+              pageNumber: 1,
+              pageSize: 100,
+              sortBy: "createdAt",
+              sortDirection: "desc",
+            })
+            .then((result) => result.items.some((item) => item.id === postId))
+            .catch(() => false)
+        : Promise.resolve(false),
     ])
-      .then(([postResponse, likesResponse, commentsResponse]) => {
+      .then(([postResponse, likesResponse, commentsResponse, bookmarkedResponse]) => {
         if (!active) {
           return;
         }
@@ -35,6 +47,7 @@ export default function PostDetailScreen({ postId }: { postId: number }) {
         setPost(postResponse);
         setLikes(likesResponse);
         setComments(commentsResponse);
+        setBookmarked(bookmarkedResponse);
       })
       .catch((err) => {
         if (!active) {
@@ -64,6 +77,23 @@ export default function PostDetailScreen({ postId }: { postId: number }) {
       setSubmitting(true);
       const updated = await api.toggleLike(postId, authData.token);
       setLikes(updated);
+    } catch (err) {
+      setError(getErrorText(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function onToggleBookmark() {
+    if (!authData?.token) {
+      setError("Please login to save this post.");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const result = await api.toggleBookmark(postId, authData.token);
+      setBookmarked(result.bookmarked);
     } catch (err) {
       setError(getErrorText(err));
     } finally {
@@ -123,6 +153,9 @@ export default function PostDetailScreen({ postId }: { postId: number }) {
               <div className="row">
                 <button type="button" className="btn btn-ghost" onClick={() => void onToggleLike()} disabled={submitting}>
                   {likes?.likedByMe ? "Unlike" : "Like"} ({likes?.totalLikes ?? post.likesCount})
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={() => void onToggleBookmark()} disabled={submitting}>
+                  {bookmarked ? "\u2605 Saved" : "\u2606 Save"}
                 </button>
               </div>
             </article>

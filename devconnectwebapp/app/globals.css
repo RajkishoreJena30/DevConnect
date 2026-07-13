@@ -21,7 +21,7 @@ body {
     linear-gradient(180deg, rgba(8, 14, 26, 0.96) 0%, rgba(11, 18, 32, 1) 100%),
     var(--bg);
   color: var(--ink);
-  font-family: var(--font-space-grotesk), sans-serif;
+  font-family: var(--font-pt-sans), sans-serif;
 }
 
 html {
@@ -112,6 +112,24 @@ textarea {
   background: rgba(72, 199, 183, 0.12);
   color: #b7f3ea;
   font-size: 0.85rem;
+}
+
+.nav-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  max-width: 220px;
+  text-decoration: none;
+}
+
+.nav-user__icon {
+  flex: 0 0 auto;
+}
+
+.nav-user__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .marketing-shell {

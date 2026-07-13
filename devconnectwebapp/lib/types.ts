@@ -68,6 +68,19 @@ export interface LikeResponse {
   likedByMe: boolean;
 }
 
+export type BookmarkSortBy = "createdAt" | "title";
+
+export interface BookmarkResponse {
+  bookmarked: boolean;
+  postId: number;
+}
+
+export interface BookmarkStats {
+  postId: number;
+  title: string;
+  bookmarkCount: number;
+}
+
 export interface PagedResult<T> {
   items: T[];
   totalCount: number;

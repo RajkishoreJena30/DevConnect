@@ -22,10 +22,13 @@ type FeedCardProps = {
   commentDrafts: Record<number, string>;
   busyCommentPostId: number | null;
   busyLikePostId: number | null;
+  bookmarkedByPostId: Record<number, boolean>;
+  busyBookmarkPostId: number | null;
   onSortByChange: (value: SortBy) => void;
   onSortDirectionChange: (value: SortDirection) => void;
   onRefresh: () => void;
   onToggleLike: (postId: number) => Promise<void>;
+  onToggleBookmark: (postId: number) => Promise<void>;
   onToggleComments: (postId: number) => Promise<void>;
   onCommentDraftChange: (postId: number, value: string) => void;
   onSubmitComment: (postId: number, event: React.FormEvent<HTMLFormElement>) => Promise<void>;
@@ -88,7 +91,10 @@ export default function FeedCard(props: FeedCardProps) {
           commentDraft={props.commentDrafts[post.id] ?? ""}
           busyCommentPostId={props.busyCommentPostId}
           busyLikePostId={props.busyLikePostId}
+          isBookmarked={props.bookmarkedByPostId[post.id] ?? false}
+          busyBookmarkPostId={props.busyBookmarkPostId}
           onToggleLike={props.onToggleLike}
+          onToggleBookmark={props.onToggleBookmark}
           onToggleComments={props.onToggleComments}
           onCommentDraftChange={props.onCommentDraftChange}
           onSubmitComment={props.onSubmitComment}

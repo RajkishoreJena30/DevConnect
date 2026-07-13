@@ -1,5 +1,8 @@
 import {
   AuthResponse,
+  BookmarkResponse,
+  BookmarkSortBy,
+  BookmarkStats,
   CommentResponse,
   CreateCommentRequest,
   CreatePostRequest,
@@ -166,6 +169,41 @@ export const api = {
       method: "POST",
       body: payload,
     });
+  },
+
+  toggleBookmark(postId: number, token: string) {
+    return request<BookmarkResponse>(`/api/posts/${postId}/bookmark`, {
+      token,
+      method: "POST",
+    });
+  },
+
+  getMyBookmarks(
+    token: string,
+    query: {
+      pageNumber: number;
+      pageSize: number;
+      sortBy: BookmarkSortBy;
+      sortDirection: SortDirection;
+      search?: string;
+    }
+  ) {
+    const params = new URLSearchParams({
+      pageNumber: String(query.pageNumber),
+      pageSize: String(query.pageSize),
+      sortBy: query.sortBy,
+      sortDirection: query.sortDirection,
+    });
+    if (query.search?.trim()) {
+      params.set("search", query.search.trim());
+    }
+    return request<PagedResult<PostResponse>>(`/api/bookmarks?${params.toString()}`, {
+      token,
+    });
+  },
+
+  getTopBookmarked(take = 5) {
+    return request<BookmarkStats[]>(`/api/bookmarks/top?take=${take}`);
   },
 };
 

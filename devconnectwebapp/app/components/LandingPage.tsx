@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import PublicPostPreview from "@/app/components/PublicPostPreview";
+import { useAuth } from "@/app/providers/AuthProvider";
 import { ApiError, api } from "@/lib/api";
 import { PagedResult, PostResponse } from "@/lib/types";
 
@@ -36,6 +37,7 @@ const emptyFeed: PagedResult<PostResponse> = {
 };
 
 export default function LandingPage() {
+  const { isAuthenticated } = useAuth();
   const [feed, setFeed] = useState<PagedResult<PostResponse>>(emptyFeed);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,12 +101,20 @@ export default function LandingPage() {
             </div>
 
             <div className="row hero-actions">
-              <Link className="btn btn-primary" href="/register">
-                Start publishing
-              </Link>
-              <Link className="btn btn-ghost" href="/login">
-                Login
-              </Link>
+              {isAuthenticated ? (
+                <Link className="btn btn-primary" href="/dashboard">
+                  Go to dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link className="btn btn-primary" href="/register">
+                    Start publishing
+                  </Link>
+                  <Link className="btn btn-ghost" href="/login">
+                    Login
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
@@ -187,8 +197,8 @@ export default function LandingPage() {
             </div>
           </div>
           <span className="preview-count">{feed.items.length} featured previews</span>
-          <Link className="btn btn-ghost" href="/login">
-            Login to read more
+          <Link className="btn btn-ghost" href={isAuthenticated ? "/dashboard" : "/login"}>
+            {isAuthenticated ? "Read more" : "Login to read more"}
           </Link>
         </div>
 

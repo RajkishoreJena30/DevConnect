@@ -9,7 +9,10 @@ type PostItemProps = {
   commentDraft: string;
   busyCommentPostId: number | null;
   busyLikePostId: number | null;
+  isBookmarked: boolean;
+  busyBookmarkPostId: number | null;
   onToggleLike: (postId: number) => Promise<void>;
+  onToggleBookmark: (postId: number) => Promise<void>;
   onToggleComments: (postId: number) => Promise<void>;
   onCommentDraftChange: (postId: number, value: string) => void;
   onSubmitComment: (postId: number, event: React.FormEvent<HTMLFormElement>) => Promise<void>;
@@ -39,6 +42,15 @@ export default function PostItem(props: PostItemProps) {
           disabled={props.busyLikePostId === post.id}
         >
           {props.likes.likedByMe ? "Unlike" : "Like"} ({props.likes.totalLikes})
+        </button>
+
+        <button
+          className="btn btn-ghost"
+          type="button"
+          onClick={() => void props.onToggleBookmark(post.id)}
+          disabled={props.busyBookmarkPostId === post.id}
+        >
+          {props.isBookmarked ? "\u2605 Saved" : "\u2606 Save"}
         </button>
 
         <button

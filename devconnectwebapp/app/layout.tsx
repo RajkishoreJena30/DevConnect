@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { PT_Sans, JetBrains_Mono } from "next/font/google";
 import SiteHeader from "@/app/components/SiteHeader";
 import { AuthProvider } from "@/app/providers/AuthProvider";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
+const ptSans = PT_Sans({
+  variable: "--font-pt-sans",
   subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -25,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${spaceGrotesk.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${ptSans.variable} ${jetbrainsMono.variable}`}>
       <body>
         <AuthProvider>
           <SiteHeader />

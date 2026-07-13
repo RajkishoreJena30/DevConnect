@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ProtectedRoute from "@/app/components/ProtectedRoute";
 import ProfileCard from "@/app/components/ProfileCard";
 import { useAuth } from "@/app/providers/AuthProvider";
@@ -33,6 +33,33 @@ export default function ProfilePage() {
       setProfileLoading(false);
     }
   }
+
+  useEffect(() => {
+    if (!authData?.token) {
+      return;
+    }
+
+    let active = true;
+    api
+      .getProfile(authData.token)
+      .then((profile) => {
+        if (!active) {
+          return;
+        }
+
+        setProfileName(profile.name);
+        setProfileAge(String(profile.age));
+      })
+      .catch((error) => {
+        if (active) {
+          setProfileError(getErrorText(error));
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [authData?.token]);
 
   async function onUpdateProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
