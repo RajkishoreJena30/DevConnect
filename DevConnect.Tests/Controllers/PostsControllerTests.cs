@@ -3,6 +3,7 @@ using DevConnect.DTOs;
 using DevConnect.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OutputCaching;
 using Moq;
 using System.Security.Claims;
 
@@ -22,6 +23,7 @@ namespace DevConnect.Tests.Controllers;
 public class PostsControllerTests
 {
     private Mock<IPostService> _serviceMock = null!;
+    private Mock<IOutputCacheStore> _cacheMock = null!;
     private PostsController _controller = null!;
 
     // ── Helper: fake logged-in user with a known ID ──────────────────────────
@@ -40,7 +42,8 @@ public class PostsControllerTests
     public void SetUp()
     {
         _serviceMock = new Mock<IPostService>();
-        _controller  = new PostsController(_serviceMock.Object)
+        _cacheMock   = new Mock<IOutputCacheStore>();
+        _controller  = new PostsController(_serviceMock.Object, _cacheMock.Object)
         {
             // Inject the fake HttpContext so User.FindFirstValue() works.
             ControllerContext = new ControllerContext
@@ -57,20 +60,27 @@ public class PostsControllerTests
     public async Task GetAll_Returns200_WithPosts()
     {
         // Arrange
-        var posts = new List<PostResponseDTO>
+        var paged = new PagedResult<PostResponseDTO>
         {
-            new() { Id = 1, Title = "Post 1" },
-            new() { Id = 2, Title = "Post 2" }
+            Items = new List<PostResponseDTO>
+            {
+                new() { Id = 1, Title = "Post 1" },
+                new() { Id = 2, Title = "Post 2" }
+            },
+            TotalCount = 2,
+            PageNumber = 1,
+            PageSize   = 10
         };
-        _serviceMock.Setup(s => s.GetAllPostsAsync()).ReturnsAsync(posts);
+        _serviceMock.Setup(s => s.GetPagedPostsAsync(It.IsAny<PostQueryParams>()))
+                    .ReturnsAsync(paged);
 
         // Act
-        var result = await _controller.GetAll() as OkObjectResult;
+        var result = await _controller.GetAll(new PostQueryParams()) as OkObjectResult;
 
         // Assert — check HTTP status code and body
         Assert.That(result,        Is.Not.Null);
         Assert.That(result!.StatusCode, Is.EqualTo(200));
-        Assert.That((result.Value as List<PostResponseDTO>)!.Count, Is.EqualTo(2));
+        Assert.That((result.Value as PagedResult<PostResponseDTO>)!.Items.Count, Is.EqualTo(2));
     }
 
     // ─────────────────────────────────────────────────────────────────────────

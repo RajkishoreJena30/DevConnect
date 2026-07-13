@@ -57,8 +57,15 @@ builder.Services.AddScoped<IPostRepository, PostRepository>();
 // Service — Scoped for same reason
 builder.Services.AddScoped<IPostService, PostService>();
 
+// Services - Repository for Bookmarks
+
+builder.Services.AddScoped<IBookmarkRepository, BookmarkRepository>();
+
+builder.Services.AddScoped<IBookmarkService, BookmarkService>();
+
 // AutoMapper — scans assembly for all Profile classes
-builder.Services.AddAutoMapper(typeof(MappingProfile));
+// v13+: AddAutoMapper is in the core package; signature takes a config action first.
+builder.Services.AddAutoMapper(cfg => { }, typeof(MappingProfile).Assembly);
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -148,7 +155,7 @@ builder.Services.AddOutputCache(options =>
 var app = builder.Build();
 
 // Catch all unhandled exceptions and return a generic error response
-app.UseExceptionHandler();
+//app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

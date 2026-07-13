@@ -11,6 +11,7 @@ namespace DevConnect.Data
         public DbSet<Post> Posts { get; set; }
         public DbSet<Like> Likes { get; set; }
         public DbSet<Comment> Comments { get; set; }
+        public DbSet<Bookmark> Bookmarks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -57,6 +58,24 @@ namespace DevConnect.Data
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.NoAction);
 
+            // Bookmark → Post (one-to-many, cascade)
+            modelBuilder.Entity<Bookmark>()
+                .HasOne(b => b.Post)
+                .WithMany(p => p.Bookmarks)
+                .HasForeignKey(b => b.PostId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Bookmark → User (one-to-many, no cascade to avoid multiple cascade paths)
+            modelBuilder.Entity<Bookmark>()
+                .HasOne(b => b.User)
+                .WithMany(u => u.Bookmarks)
+                .HasForeignKey(b => b.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            // A user can bookmark a post only once
+            modelBuilder.Entity<Bookmark>()
+                .HasIndex(b => new { b.PostId, b.UserId })
+                .IsUnique();
 
         }
 

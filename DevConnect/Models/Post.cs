@@ -15,5 +15,6 @@ namespace DevConnect.Models
         public User User { get; set; } = null!;
         public ICollection<Like> Likes { get; set;} 
         public ICollection<Comment> Comments { get; set; }
+        public ICollection<Bookmark> Bookmarks { get; set; }
     }
 }

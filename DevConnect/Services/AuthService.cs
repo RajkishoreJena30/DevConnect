@@ -83,7 +83,7 @@ namespace DevConnect.Services
                 Provider = dto.Provider,
                 ProviderUserId = dto.ProviderUserId,
                 Role = "User",
-                PasswordHash = null  // no password for OIDC users
+                PasswordHash = string.Empty  // no password for OIDC users (column is NOT NULL)
             };
 
             _context.Users.Add(newUser);
