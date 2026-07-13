@@ -147,6 +147,9 @@ builder.Services.AddOutputCache(options =>
 
 var app = builder.Build();
 
+// Catch all unhandled exceptions and return a generic error response
+app.UseExceptionHandler();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
