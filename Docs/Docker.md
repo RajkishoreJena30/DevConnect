@@ -10,6 +10,7 @@ This guide explains how the DevConnect ASP.NET Core Web API and its SQL Server d
 | `DevConnect/.dockerignore` | Keeps `bin/`, `obj/`, `Logs/`, and dev secrets out of the build context. |
 | `docker-compose.yml` | Orchestrates the API + SQL Server 2022 with a health check and a persisted volume. |
 | `Program.cs` (auto-migrate block) | Applies EF Core migrations on startup when `RunMigrationsAtStartup=true`. |
+| `adminer` service (compose) | Web-based database viewer (AdminerEvo, includes the MSSQL driver) for browsing the data. |
 
 ## Architecture
 
@@ -58,6 +59,55 @@ if (app.Configuration.GetValue<bool>("RunMigrationsAtStartup"))
 
 Local `dotnet run` is unaffected unless you explicitly set the flag.
 
+## Local vs Docker setup
+
+Both run the **same code** — only the **configuration** changes. Docker overrides settings via environment variables in `docker-compose.yml`; the local run uses `appsettings.Development.json`.
+
+| | Local (`dotnet run` / Visual Studio) | Docker (`docker compose`) |
+| --- | --- | --- |
+| Database | Your local SQL Server (`INGBTCPIC5NB136\SQLEXPRESS`, Windows auth) | `db` container (SQL Server 2022, `sa` auth) |
+| Connection string | From `appsettings.Development.json` | Overridden by `ConnectionStrings__DefaultConnection` in compose |
+| JWT key | From `appsettings.Development.json` | Overridden by `JwtSettings__Key` in compose |
+| Migrations | Run manually | Auto-applied at startup (`RunMigrationsAtStartup=true`) |
+| DB viewer | SSMS / Azure Data Studio / VS Code | Adminer at http://localhost:8081 |
+| API URL | http://localhost:5029 (and https://localhost:7238) | http://localhost:5029 |
+
+### Run locally
+
+Requires your local SQL Server running and the dev secrets in `appsettings.Development.json`.
+
+```powershell
+cd C:\Philips\Other\C#And.NetPractice\DevConnect\DevConnect
+
+# First time / after model changes — create/update the schema.
+# This project has TWO DbContexts, so specify it explicitly.
+dotnet ef database update --context DevConnectDbContext
+
+# Run the API
+dotnet run
+```
+
+Then open http://localhost:5029/swagger.
+
+### Run with Docker
+
+Requires only Docker Desktop — no local SQL Server and no manual migrations.
+
+```powershell
+cd C:\Philips\Other\C#And.NetPractice\DevConnect
+
+docker compose up -d --build      # build + start api, db, adminer
+docker compose logs -f api        # watch startup
+docker compose down               # stop (keep data)
+docker compose down -v            # stop + wipe the database
+```
+
+Then open http://localhost:5029/swagger and the DB viewer at http://localhost:8081.
+
+### Don't run both at once
+
+Both setups bind host ports **5029** (API) and **1433** (SQL Server). If the local API/SQL Server is running, `docker compose up` fails with "port already in use" — stop one before starting the other. The two databases are **separate**: data created in Docker does not appear in your local SQL Server and vice versa.
+
 ## Running it
 
 Run all commands from the solution root: `c:\Philips\Other\C#And.NetPractice\DevConnect`.
@@ -78,7 +128,33 @@ Endpoints once running:
 
 - API: http://localhost:5029
 - Swagger: http://localhost:5029/swagger
-- SQL Server: `localhost,1433` — user `sa`, password `Your_strong_Passw0rd!`
+- Database viewer (Adminer): http://localhost:8081
+- SQL Server: `localhost,1433` — user `sa`, password `Kishore@654321`
+
+## Open the DB viewer (Adminer)
+
+A web-based viewer runs as the `adminer` service so you can browse tables and run queries in the browser — no extra install needed. The image `shyim/adminerevo:latest` is used directly because the official Adminer image does **not** ship a SQL Server driver.
+
+1. Start the stack (the viewer starts with it):
+
+   ```powershell
+   docker compose up -d
+   ```
+
+2. Open **http://localhost:8081** in your browser.
+3. Log in with these values (System and Server are pre-filled by the compose env vars):
+
+   | Field | Value |
+   | --- | --- |
+   | System | **MS SQL** |
+   | Server | `db` |
+   | Username | `sa` |
+   | Password | `Kishore@654321` |
+   | Database | `DevConnect` |
+
+4. After logging in, click a table (e.g. `Users`, `Posts`, `Bookmarks`) to view rows, or use **SQL command** to run queries.
+
+> Note: `Server` is `db` (the compose service name), not `localhost`, because Adminer connects to SQL Server over the internal Docker network. To connect from a tool on your host instead, use `localhost,1433`.
 
 ## Common commands
 

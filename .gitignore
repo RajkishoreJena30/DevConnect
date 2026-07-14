@@ -6,6 +6,9 @@
 # Local environment settings with sensitive data (connection strings, secrets)
 **/appsettings.Development.json
 
+# Local/corporate root CA certs used only for the Docker build (network-specific)
+**/certs/*.crt
+
 # dotenv files
 .env
 

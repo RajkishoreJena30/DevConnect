@@ -2,6 +2,12 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+# Trust any local/corporate root CAs (e.g. Cisco Umbrella SSL inspection) so NuGet
+# restore works behind a corporate firewall. Drop *.crt files into DevConnect/certs/.
+# The folder is always present, so the build works even when no cert is provided.
+COPY ["certs/", "/usr/local/share/ca-certificates/"]
+RUN update-ca-certificates
+
 # Restore first (better layer caching)
 COPY ["DevConnect.csproj", "./"]
 RUN dotnet restore "DevConnect.csproj"

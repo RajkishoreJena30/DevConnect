@@ -4,7 +4,7 @@ services:
     container_name: devconnect-db
     environment:
       ACCEPT_EULA: "Y"
-      MSSQL_SA_PASSWORD: "Your_strong_Passw0rd!"
+      MSSQL_SA_PASSWORD: "Kishore@654321"
     ports:
       - "1433:1433"
     volumes:
@@ -30,9 +30,25 @@ services:
       # Applies EF Core migrations on startup so the schema is created automatically
       RunMigrationsAtStartup: "true"
       # SQL auth connection string pointing at the "db" service (overrides appsettings)
-      ConnectionStrings__DefaultConnection: "Server=db;Database=DevConnect;User Id=sa;Password=Your_strong_Passw0rd!;TrustServerCertificate=True;Encrypt=False"
+      ConnectionStrings__DefaultConnection: "Server=db;Database=DevConnect;User Id=sa;Password=Kishore@654321;TrustServerCertificate=True;Encrypt=False"
+      # JWT signing key (kept out of the image; appsettings.Development.json is not copied into the container)
+      JwtSettings__Key: "K7mN2pQx8vLsR4tYwZdJfHgUcAeObWiP+Mn3XyVqTkCl5rEhDj6uFsG9nIaBz067uh="
     ports:
       - "5029:8080"
+
+  # Web-based database viewer (AdminerEvo ships the MSSQL driver) -> http://localhost:8081
+  adminer:
+    image: shyim/adminerevo:latest
+    container_name: devconnect-adminer
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Pre-fills the login form: driver + server
+      ADMINER_DEFAULT_SERVER: db
+      ADMINER_DEFAULT_DRIVER: mssql
+    ports:
+      - "8081:8080"
 
 volumes:
   mssql-data:
