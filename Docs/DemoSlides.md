@@ -13,9 +13,9 @@ footer: "July 14, 2026"
 # DevConnect
 ## A Full-Stack Social API
 
-**3 Months of C# & .NET — Learning Showcase**
+**C# & .NET — Learning Showcase**
 
-Presented by: *[Your Name]*
+Presented by: Rajkishore Jena
 July 14, 2026
 
 ---
@@ -137,7 +137,6 @@ DevConnect.sln
 ├─ DevConnect.Tests/           ← NUnit + Moq tests (unit + integration)
 └─ devconnectwebapp/           ← Next.js frontend (React + TS)
 ```
-
 > Folders mirror the layers: **Controller ▸ Service ▸ Repository ▸ Data**.
 
 ---
@@ -154,38 +153,6 @@ DevConnect.sln
 | `Mappings/` + `Validators/` | Cross-cutting concerns | Keep models clean |
 
 > Predictable structure = easy to navigate, test, and onboard.
-
----
-
-# System Design
-
-<style scoped>
-pre { font-size: 16px; line-height: 1.15; }
-</style>
-
-```
-        ┌────────────────┐
-        │  User / Browser  │
-        └────────┬───────┘
-                 │  HTTPS
-                 ▼
-   ┌─────────────────────┐
-   │   Next.js Frontend   │
-   └────────┬──────────┘
-            │  JWT
-            ▼
-   ┌─────────────────────┐    ┌────────────────┐
-   │  ASP.NET Core Web API  ├──▶│ Google / GitHub  │
-   │  (middleware pipeline) │    └────────────────┘
-   └────────┬──────────┘
-            │
-            ▼
-         EF Core  ▶  SQL Server
-```
-
-- Pipeline: **Serilog ▸ CORS ▸ Cache ▸ AuthN ▸ AuthZ**
-- **Stateless** JWT auth — scales horizontally
-- **Output cache** shields DB from read-heavy traffic
 
 ---
 
@@ -359,11 +326,13 @@ dotnet test   # all green ✅
 # What's Next
 
 - Refresh tokens for longer sessions
-- Global exception-handling middleware
+- Global exception-handling middleware (better error handling)
 - Rate limiting
 - Higher test coverage
-- Secrets in a vault (Azure Key Vault)
 - Caching & indexing for scale
+- Docker — containerized API + database
+- Redis — distributed caching
+- Kafka — event-driven messaging queue
 
 ---
 
