@@ -31,7 +31,12 @@ For every concept you get:
 15. [Collections — List & Dictionary](#15-collections--list--dictionary)
 16. [LINQ](#16-linq)
 17. [Streams](#17-streams)
-18. [Quick Interview Cheat Sheet](#18-quick-interview-cheat-sheet)
+18. [Access Modifiers — private / public / internal / protected](#18-access-modifiers--private--public--internal--protected)
+19. [Method Overriding vs Method Hiding](#19-method-overriding-vs-method-hiding)
+20. [Keywords & Multiple Inheritance via Interfaces](#20-keywords--multiple-inheritance-via-interfaces)
+21. [Exception Handling](#21-exception-handling)
+22. [Collections — Generic vs Non-Generic](#22-collections--generic-vs-non-generic)
+23. [Quick Interview Cheat Sheet](#23-quick-interview-cheat-sheet)
 
 ---
 
@@ -629,7 +634,264 @@ return Ok(await _postService.GetPagedPostsAsync(query)); // serialized to the re
 
 ---
 
-## 18. Quick Interview Cheat Sheet
+## 18. Access Modifiers — private / public / internal / protected
+
+🟢 **Definition:** Access modifiers control **who can see/use** a member.
+
+| Modifier | Visible to | Note |
+|----------|-----------|------|
+| `private` | Only the same class | **Default** for class members (fields/methods) if you write nothing |
+| `public` | Everyone, any assembly | The exposed surface (API contracts) |
+| `internal` | Only the **same assembly/project** | **Default** for top-level `class`/`interface` |
+| `protected` | The class + derived classes | For inheritance/overriding |
+
+> ⚠️ **"By default a member is private."** If you don't write a modifier on a **field/method inside a class**, it is `private`. If you don't write one on a **top-level type** (`class`/`interface`), it is `internal`. To expose something you must explicitly say `public` (or `internal`).
+
+🧩 **Real code** — all four in one place, `DevConnect/Controllers/AuthController.cs`
+
+```csharp
+// 'public' type so ASP.NET (another assembly) can discover the controller
+public class AuthController : ControllerBase
+{
+    // 'private' fields — hidden internal state, only this class touches them
+    private readonly DevConnectDbContext _context;
+    private readonly IConfiguration _config;
+
+    // 'public' constructor — DI container (external) must call it
+    public AuthController(DevConnectDbContext context, IConfiguration config, ...) { ... }
+
+    // 'public' action — the HTTP pipeline (external) invokes it
+    [HttpPost("register")]
+    public async Task<ActionResult<AuthResponseDTO>> Register(RegisterDTO dto) { ... }
+}
+```
+
+🧩 **Real code** — `protected override`, `DevConnect/Data/DevConnectDbContext.cs`
+
+```csharp
+// 'protected' so only DbContext + derived types can call/override it
+protected override void OnModelCreating(ModelBuilder modelBuilder) { ... }
+```
+
+💡 **What / Where / Why**
+- **What:** `private` fields (`_context`), `public` controllers/services/actions, `protected` overridable hooks (`OnModelCreating`), `internal` default on helper types.
+- **Where:** Every service/controller (`private _` fields + `public` methods), `DevConnectDbContext` (`protected override`).
+- **Why:** Keep internal state `private` (encapsulation), expose only the intended API as `public`, and use `protected` for members meant to be extended by subclasses. Minimizing visibility reduces the surface for bugs and misuse.
+
+---
+
+## 19. Method Overriding vs Method Hiding
+
+🟢 **Definition:** Both replace a base method in a derived class, but they are **opposite mechanisms**:
+
+| | **Overriding** (`override`) | **Hiding** (`new`) |
+|---|-----------------------------|--------------------|
+| Base method must be | `virtual` / `abstract` | anything |
+| Resolved at | **Runtime** (which object it really is) | **Compile time** (the reference type) |
+| Base version | Replaced everywhere | Still runs when called via the base reference |
+| Keyword | `override` | `new` |
+
+🧩 **Real code — Overriding** (used in production), `DevConnect/Data/DevConnectDbContext.cs`
+
+```csharp
+// EF Core calls this virtual method internally at runtime → our override always wins
+protected override void OnModelCreating(ModelBuilder modelBuilder)
+{
+    base.OnModelCreating(modelBuilder);
+    modelBuilder.Entity<Like>().HasIndex(l => new { l.PostId, l.UserId }).IsUnique();
+}
+```
+
+🧩 **Method Hiding — conceptual** (not used in this project, but this is what `new` means)
+
+```csharp
+public class BaseLogger        { public void Log() => Console.WriteLine("base"); }
+public class FileLogger : BaseLogger
+{
+    // 'new' HIDES the base method — no 'virtual' involved
+    public new void Log() => Console.WriteLine("file");
+}
+
+BaseLogger l = new FileLogger();
+l.Log();   // prints "base"  → HIDING is compile-time (reference type = BaseLogger)
+// If Log() were 'virtual'+'override', it would print "file" (runtime).
+```
+
+💡 **What / Where / Why**
+- **What:** `override` (dynamic replacement) vs `new` (static hiding).
+- **Where:** Overriding is used in `DevConnectDbContext.OnModelCreating` and every EF `Migration` (`override Up/Down`). Hiding is intentionally avoided.
+- **Why:** We override framework hooks so our logic runs no matter how the object is referenced (polymorphism). Hiding is generally discouraged because behavior changes based on the reference type, which surprises callers — so the project sticks to `override`.
+
+---
+
+## 20. Keywords & Multiple Inheritance via Interfaces
+
+🟢 **Definition — "Interfaces give C# multiple inheritance."** A class can inherit from only **one** base class, but it can implement **many** interfaces — that's how C# achieves multiple inheritance of *type/contract*.
+
+🧩 **Real code** — one base class + interface contract, `DevConnect/Controllers/PostsController.cs` / `Services/PostService.cs`
+
+```csharp
+// Single class inheritance
+public class PostsController : ControllerBase { ... }
+
+// A class implementing an interface (can add more, comma-separated)
+public class PostService : IPostService { ... }
+// e.g. multiple: class X : BaseClass, IPostService, IDisposable { ... }
+```
+
+**Keywords used across DevConnect and what they do:**
+
+| Keyword | Meaning | Real usage in project |
+|---------|---------|-----------------------|
+| `private` | Member visible only in its class | `private readonly IPostRepository _repo;` |
+| `public` | Visible everywhere | `public class PostService` |
+| `internal` | Visible within the same project | default on helper types |
+| `class` | Declares a reference type (blueprint) | `public class User` |
+| `interface` | Declares a contract (multiple inheritance) | `public interface IPostRepository` |
+| `void` | Method returns nothing | `protected override void OnModelCreating(...)` |
+| `override` | Replace a virtual/abstract base method | `override void Up(MigrationBuilder ...)` |
+| `abstract` | Base type/member with no body, must be overridden | `AbstractValidator<T>` base |
+| `internal`/`protected` | Assembly / inheritance scope | `protected override void BuildModel(...)` |
+
+💡 **What / Where / Why**
+- **What:** `PostService` inherits one contract (`IPostService`) and could implement several interfaces at once.
+- **Where:** All services (`: IPostService`, `: IAuthService`), all controllers (`: ControllerBase`), validators (`: AbstractValidator<T>`).
+- **Why:** Single class inheritance avoids the "diamond problem," while multiple **interface** implementation lets one class satisfy several capabilities (e.g. a service that is both `IPostService` and `IDisposable`) — flexible design without ambiguous state.
+
+---
+
+## 21. Exception Handling
+
+🟢 **Definition:** An **exception** is a runtime error object thrown when something goes wrong. `try`/`catch`/`finally` lets you handle it gracefully instead of crashing.
+
+**Error categories**
+
+| Type | When | Example |
+|------|------|---------|
+| **Compile-time error** | Before the program runs; the compiler refuses to build | missing `;`, wrong type, undefined variable |
+| **Run-time error (exception)** | While the program runs | `NullReferenceException`, `FormatException`, DB timeout |
+
+**Exception hierarchy** — everything derives from `System.Exception`:
+- **`SystemException`** — thrown by the runtime: `NullReferenceException`, `IndexOutOfRangeException`, `FormatException`, `ArgumentException`.
+- **`ApplicationException`** — historically the base for **custom app-defined** exceptions (`throw new ApplicationException(...)`).
+
+**`try` / `catch` structure**
+
+```csharp
+try
+{
+    var id = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!); // may throw FormatException
+    var post = arr[10]; // may throw IndexOutOfRangeException
+}
+catch (FormatException ex)              // catch a SPECIFIC exception first
+{
+    // handle bad number format
+}
+catch (Exception ex)                    // general fallback
+{
+    // log + return a safe error
+}
+finally
+{
+    // always runs (cleanup) — optional
+}
+```
+
+🧩 **Real code — how DevConnect actually handles failures** (guard clauses instead of throwing), `DevConnect/Controllers/AuthController.cs`
+
+```csharp
+[HttpPost("register")]
+public async Task<ActionResult<AuthResponseDTO>> Register(RegisterDTO dto)
+{
+    // Validate at the boundary and return a controlled error rather than letting an exception bubble
+    if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
+        return BadRequest("Email already exists.");   // safe, expected failure
+
+    var user = _mapper.Map<User>(dto);
+    ...
+}
+```
+
+🧩 **Real code — a call that *can* throw**, `DevConnect/Controllers/PostsController.cs`
+
+```csharp
+// int.Parse throws FormatException if the claim isn't a number;
+// indexing a collection out of bounds throws IndexOutOfRangeException.
+var userId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+```
+
+🧩 **Real code — global exception safety net**, `DevConnect/Program.cs`
+
+```csharp
+// Catch all unhandled exceptions and return a generic error response
+//app.UseExceptionHandler();   // centralized middleware catches anything not handled locally
+```
+
+💡 **What / Where / Why**
+- **What:** Compile-time vs run-time errors; `SystemException` (e.g. `IndexOutOfRangeException`, `FormatException`) vs `ApplicationException`; `try/catch/finally`.
+- **Where:** Guard clauses in `AuthController` (`BadRequest`, `Unauthorized`, `Conflict`), `int.Parse` in `PostsController`, and the global `UseExceptionHandler` in `Program.cs`.
+- **Why:** This project prefers **guard clauses** (`if (...) return BadRequest(...)`) for *expected* failures because they're cheaper and clearer than throwing, and reserves exception handling for *unexpected* runtime faults, caught centrally so one bad request never crashes the server.
+
+---
+
+## 22. Collections — Generic vs Non-Generic
+
+🟢 **Definition:**
+- **Non-generic collections** (`System.Collections`) store `object` — any type, but require boxing/casting and are **not type-safe**: `ArrayList`, `Hashtable`, `SortedList`, `Stack`, `Queue`.
+- **Generic collections** (`System.Collections.Generic`) use a **type parameter in angle brackets `<>`** for compile-time type safety and no boxing: `List<T>`, `Dictionary<TKey,TValue>`, `Stack<T>`, `Queue<T>`.
+
+| Non-generic | Generic equivalent | Access pattern |
+|-------------|--------------------|----------------|
+| `ArrayList` | `List<T>` | by **index** |
+| `Hashtable` | `Dictionary<TKey,TValue>` | by **key → value** |
+| `SortedList` | `SortedList<TKey,TValue>` | key/value, **kept in sorted order** |
+| `Stack` | `Stack<T>` | **LIFO** (last-in first-out) |
+| `Queue` | `Queue<T>` | **FIFO** (first-in first-out) |
+
+🧩 **Real code — DevConnect uses the modern GENERIC collections everywhere**, `DevConnect/Models/User.cs` & `Repositories/PostRepository.cs`
+
+```csharp
+// Generic List<T> — <> makes it strongly typed to Post (no casting)
+public List<Post> Posts { get; set; } = new();
+
+public async Task<List<Post>> GetAllAsync() =>
+    await _context.Posts.Include(p => p.User).ToListAsync();
+```
+
+🧩 **Real code — Generic Dictionary `<string,int>`-style keyed lookup**, `DevConnect/Program.cs`
+
+```csharp
+// OpenApiSecurityRequirement behaves like a generic Dictionary<key, value>
+options.AddSecurityRequirement(new OpenApiSecurityRequirement
+{
+    { new OpenApiSecurityScheme { ... }, Array.Empty<string>() }  // key → value
+});
+```
+
+🧩 **Non-generic equivalents — for comparison** (intentionally NOT used in this project)
+
+```csharp
+// Legacy, not type-safe — everything is 'object', needs casting:
+var list = new ArrayList();          list.Add(1); list.Add("two");   // mixed types allowed (risky)
+var table = new Hashtable();         table["age"] = 30;              // key/value of object
+var sorted = new SortedList();       // key/value auto-sorted by key
+var stack = new Stack();  stack.Push(1);  stack.Pop();               // LIFO
+var queue = new Queue();  queue.Enqueue(1); queue.Dequeue();         // FIFO
+
+// Modern, type-safe generic versions (what we prefer):
+var nums = new List<int> { 1, 2, 3 };                 // index-based
+var ages = new Dictionary<string, int> { ["age"] = 30 }; // <string,int> key/value
+var s = new Stack<int>();  var q = new Queue<int>();
+```
+
+💡 **What / Where / Why**
+- **What:** Generic `List<Post>` (index) and `Dictionary`-style keyed config (`<key,value>`); non-generic `ArrayList`/`Hashtable`/`Stack`/`Queue` shown for contrast.
+- **Where:** `List<T>` in every model navigation property, repository, and service; keyed structures in `Program.cs` (Swagger/security).
+- **Why:** The project uses **generic** collections because the `<>` type parameter gives **compile-time type safety**, avoids boxing/unboxing overhead, and removes error-prone casts. Non-generic `ArrayList`/`Hashtable` are legacy (pre-2005) and avoided; generics are the modern standard.
+
+---
+
+## 23. Quick Interview Cheat Sheet
 
 | Concept | One-liner | Where in DevConnect |
 |--------|-----------|---------------------|
@@ -650,6 +912,12 @@ return Ok(await _postService.GetPagedPostsAsync(query)); // serialized to the re
 | List / Dictionary | Dynamic list / keyed map | `List<Post>`, Swagger security dict |
 | LINQ | Declarative queries → SQL | `Where/OrderBy/Skip/Take` paging |
 | Streams | Incremental byte sequences | Serilog file logs, HTTP body, UTF8 bytes |
+| Access modifiers | private (default member) / public / internal (default type) / protected | `private _context`, `public` actions, `protected override` |
+| Overriding vs Hiding | `override` = runtime; `new` = compile-time hide | `override OnModelCreating` (hiding avoided) |
+| Multiple inheritance | One base class, many interfaces | `: ControllerBase`, `: IPostService` |
+| Keywords | private/public/internal/class/interface/void/override/abstract | throughout |
+| Exception handling | try/catch/finally; System vs Application exception | guard clauses + `int.Parse`, `UseExceptionHandler` |
+| Generic vs Non-generic | `<T>` type-safe (List/Dictionary) vs object (ArrayList/Hashtable) | `List<Post>`, `Dictionary`-style Swagger config |
 
 ---
 
@@ -665,3 +933,56 @@ flowchart LR
 ```
 
 Every layer is a **class** built via a **DI constructor**, talks through an **interface** (abstraction + polymorphism), keeps state **encapsulated**, runs **async**, and moves data using **collections/LINQ** — a complete, real-world OOP picture.
+
+## Out Side Example:
+using System;
+using System.Collections.Generic;
+
+// Base Class
+public class Vehicle
+{
+    // "virtual" allows child classes to change this method's behavior
+    public virtual void StartEngine()
+    {
+        Console.WriteLine("The vehicle engine starts.");
+    }
+}
+
+// Derived Class 1
+public class Car : Vehicle
+{
+    public override void StartEngine()
+    {
+        Console.WriteLine("The car engine purrs smoothly.");
+    }
+}
+
+// Derived Class 2
+public class Motorcycle : Vehicle
+{
+    public override void StartEngine()
+    {
+        Console.WriteLine("The motorcycle engine roars to life.");
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        // Polymorphism in action: Storing different objects in a list of the base type
+        List<Vehicle> garage = new List<Vehicle>
+        {
+            new Car(),
+            new Motorcycle(),
+            new Vehicle()
+        };
+
+        // C# dynamically determines which method to call at runtime based on the object type
+        foreach (var vehicle in garage)
+        {
+            vehicle.StartEngine();
+        }
+    }
+}
+

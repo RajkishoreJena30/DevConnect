@@ -15,6 +15,34 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+  
+  # --- Redis store (the actual cache server) ---
+  redis:
+    image: redis:7.4-alpine
+    container_name: devconnect-redis
+    command: ["redis-server", "--appendonly", "yes"]   # persist to disk (AOF)
+    ports:
+      - "6379:6379"          # host access for redis-cli / debugging
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # --- RedisInsight web UI --> http://localhost:8082 ---
+  redis-ui:
+    image: redis/redisinsight:2.62
+    container_name: devconnect-redis-ui
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "8082:5540"          # RedisInsight listens on 5540 inside the container
+    volumes:
+      - redisinsight-data:/data
 
   api:
     build:
@@ -35,6 +63,9 @@ services:
       JwtSettings__Key: "K7mN2pQx8vLsR4tYwZdJfHgUcAeObWiP+Mn3XyVqTkCl5rEhDj6uFsG9nIaBz067uh="
     ports:
       - "5029:8080"
+    volumes:
+      # Persist Serilog file logs to the host so they show up in DevConnect/Logs
+      - ./DevConnect/Logs:/app/Logs
 
   # Web-based database viewer (AdminerEvo ships the MSSQL driver) -> http://localhost:8081
   adminer:
@@ -43,12 +74,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       # Pre-fills the login form: driver + server
       ADMINER_DEFAULT_SERVER: db
       ADMINER_DEFAULT_DRIVER: mssql
+      Redis__ConnectionString: "redis:6379"
     ports:
       - "8081:8080"
 
 volumes:
   mssql-data:
+  redis-data:
+  redisinsight-data:

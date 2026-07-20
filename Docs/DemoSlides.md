@@ -4,7 +4,7 @@ theme: default
 paginate: true
 size: 16:9
 header: "DevConnect — C# / .NET Demo"
-footer: "July 14, 2026"
+footer: "July 21, 2026"
 ---
 
 <!-- _class: lead -->
@@ -16,7 +16,7 @@ footer: "July 14, 2026"
 **C# & .NET — Learning Showcase**
 
 Presented by: Rajkishore Jena
-July 14, 2026
+July 21, 2026
 
 ---
 
