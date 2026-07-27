@@ -1,24 +1,4 @@
 @DevConnect_HostAddress = http://localhost:5029
 
-GET {{DevConnect_HostAddress}}/weatherforecast/
+GET {{DevConnect_HostAddress}}/api/posts/
 Accept: application/json
-
-###
-GET {{DevConnect_HostAddress}}/api/books/
-Accept: application/json
-
-###
-GET {{DevConnect_HostAddress}}/appi/books/2
-Accept: application/json
-
-###
-POST {{DevConnect_HostAddress}}/appi/books
-Accept:application/json
-Content-Type:application/json
-
-{
-  "id": 15,
-  "title": "Title25",
-  "author": "Author44",
-  "yearOfPublished": 2010
-}

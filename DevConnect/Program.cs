@@ -100,8 +100,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddDbContext<FirstAPIContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
 builder.Services.AddDbContext<DevConnectDbContext>(option => option.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Register AuthService
@@ -160,12 +158,8 @@ if (app.Configuration.GetValue<bool>("RunMigrationsAtStartup"))
 {
     using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
-    services.GetRequiredService<FirstAPIContext>().Database.Migrate();
     services.GetRequiredService<DevConnectDbContext>().Database.Migrate();
 }
-
-// Catch all unhandled exceptions and return a generic error response
-//app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
